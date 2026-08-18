@@ -52,7 +52,7 @@ app/build/outputs/apk/debug/app-debug.apk
 1. Dirígete a la pestaña **Actions** en tu repositorio de GitHub.
 2. El workflow **`Android CI Build APK`** se ejecutará automáticamente en cada `push` a la rama `main` o puedes lanzarlo manualmente con **Run workflow**.
 3. Haz clic en la ejecución completada con éxito (icono verde ✅).
-4. En la sección inferior **Artifacts**, haz clic en el artefacto **`app-debug`** para descargar el archivo comprimido que contiene el APK listo para instalar en tu tablet o móvil Android.
+4. En la sección inferior **Artifacts**, haz clic en el artefacto **`app-debug-apk`** para descargar el archivo comprimido que contiene el APK listo para instalar en tu tablet o móvil Android.
 
 ---
 

@@ -1,6 +1,6 @@
 {
-  "name": "",
-  "description": "",
+  "name": "HyperEditor",
+  "description": "Native Android photo editor for external galleries and tablets",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -3,7 +3,7 @@ package com.hypereditor.nativegallery.ui.state
 import android.graphics.Bitmap
 import android.net.Uri
 import com.hypereditor.nativegallery.domain.model.EditorDocument
-import com.hypereditor.nativegallery.ui.tools.ToolType
+import com.hypereditor.nativegallery.domain.model.UserPreset
 
 data class EditorUiState(
     val isLoading: Boolean = true,
@@ -11,7 +11,10 @@ data class EditorUiState(
     val originalBitmap: Bitmap? = null,
     val previewBitmap: Bitmap? = null,
     val document: EditorDocument? = null,
-    val activeToolType: ToolType = ToolType.ADJUSTMENTS,
+    val activeLayerId: String? = null,
+    val activeMaskId: String? = null,
+    val userPresets: List<UserPreset> = emptyList(),
+    val selectedTab: EditorSectionTab = EditorSectionTab.ADJUSTMENTS,
     val isComparingOriginal: Boolean = false,
     val canUndo: Boolean = false,
     val canRedo: Boolean = false,

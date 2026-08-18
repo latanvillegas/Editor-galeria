@@ -13,6 +13,7 @@ data class EditorDocument(
     val cropTransform: EditOperation.CropTransform = EditOperation.CropTransform(),
     val appliedFilter: EditOperation.ColorFilter? = null,
     val layers: List<LayerModel> = emptyList(),
+    val masks: List<MaskModel> = emptyList(),
     val brushStrokes: List<EditOperation.BrushDraw> = emptyList(),
     val textOverlays: List<EditOperation.TextOverlay> = emptyList(),
     val cloneStamps: List<EditOperation.CloneStampPoint> = emptyList()

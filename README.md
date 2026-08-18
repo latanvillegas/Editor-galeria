@@ -1,58 +1,69 @@
 # HyperEditor Pro (Native Android Photo Editor)
 
-Editor fotográfico nativo en **Kotlin + Jetpack Compose** diseñado como editor externo complementario para galerías (como **Aves Gallery**) con soporte tablet-first y pipeline no destructivo.
+Editor fotográfico profesional nativo para Android desarrollado en **Kotlin** y **Jetpack Compose**. Diseñado con una arquitectura desacoplada, no destructiva, orientada a tablets y totalmente integrable con galerías externas como **Aves Gallery** a través de Intents de Android (`ACTION_EDIT` / `ACTION_SEND`).
 
 ---
 
-## 🚀 1. Cómo abrir y probar el proyecto en Android Studio
+## 🛠️ 1. Cómo abrir el proyecto
 
-1. Abre **Android Studio** (Hedgehog, Iguana, Ladybug o superior).
-2. Selecciona **File -> Open...** y elige la carpeta raíz de este repositorio.
-3. Deja que Gradle descargue las dependencias y sincronice el proyecto.
-4. Para ejecutar el build de depuración localmente desde la terminal:
-   ```bash
-   ./gradlew assembleDebug
-   ```
+1. Descarga o clona este repositorio en tu equipo.
+2. Abre **Android Studio** (versión Hedgehog 2023.1.1, Ladybug o superior).
+3. Selecciona **File > Open...** y selecciona la carpeta raíz del proyecto.
+4. Espera a que Gradle descargue las dependencias y sincronice el proyecto automáticamente con **JDK 17**.
 
 ---
 
-## 📦 2. Ubicación del APK local
+## 💻 2. Cómo compilar localmente
 
-Una vez compilado en tu máquina, el archivo APK generado se ubica en:
+Para compilar el APK de depuración desde la terminal en la raíz del proyecto:
+
+```bash
+# Dar permisos de ejecución si estás en Linux/macOS
+chmod +x ./gradlew
+
+# Compilar APK de depuración
+./gradlew assembleDebug
+```
+
+Una vez finalizada la compilación, el archivo APK generado se encontrará en:
 ```text
 app/build/outputs/apk/debug/app-debug.apk
 ```
 
 ---
 
-## 🔄 3. Sincronización a GitHub desde Gemini Studio
+## 🔄 3. Cómo sincronizar a GitHub
 
-1. En la esquina superior de **Gemini Studio**, abre el menú de opciones (**Settings / Export**).
-2. Elige **Export to GitHub** (o descarga el proyecto como ZIP y súbelo a tu repositorio de GitHub).
-3. Asegúrate de que la rama principal sea `main`.
-4. Haz `git push` de los cambios.
-
----
-
-## ⚡ 4. Cómo verificar GitHub Actions y Descargar el APK
-
-1. Ve a tu repositorio en GitHub y haz clic en la pestaña **Actions**.
-2. Verás el flujo **Android CI Build APK** en ejecución tras cada `push` a `main` (también puedes iniciarlo manualmente con el botón **Run workflow**).
-3. Cuando el job finalice con éxito (indicador verde ✅), haz clic sobre la ejecución.
-4. En la parte inferior de la página, en la sección **Artifacts**, encontrarás **`app-debug-apk`**. Haz clic para descargar el archivo ZIP con el APK listo para instalar.
+1. Inicializa y vincula tu repositorio remoto en GitHub si aún no lo has hecho:
+   ```bash
+   git init
+   git add .
+   git commit -m "HyperEditor Pro v1.0"
+   git branch -M main
+   git remote add origin https://github.com/TU_USUARIO/TU_REPOSITORIO.git
+   git push -u origin main
+   ```
+2. Desde la interfaz de AI Studio, también puedes usar la opción **Settings / Export -> Export to GitHub**.
 
 ---
 
-## 🛠️ 5. Cambio entre Build Debug y Release
+## ⚡ 4. Cómo descargar el APK desde GitHub Actions
 
-- **Debug (por defecto en CI):**
-  ```bash
-  ./gradlew assembleDebug
-  ```
-  Genera un APK autofirmado con las claves de desarrollo de Android, listo para instalar directamente en cualquier tablet o teléfono.
+1. Dirígete a la pestaña **Actions** en tu repositorio de GitHub.
+2. El workflow **`Android CI Build APK`** se ejecutará automáticamente en cada `push` a la rama `main` o puedes lanzarlo manualmente con **Run workflow**.
+3. Haz clic en la ejecución completada con éxito (icono verde ✅).
+4. En la sección inferior **Artifacts**, haz clic en el artefacto **`app-debug`** para descargar el archivo comprimido que contiene el APK listo para instalar en tu tablet o móvil Android.
 
-- **Release:**
-  ```bash
-  ./gradlew assembleRelease
-  ```
-  Genera el APK en `app/build/outputs/apk/release/app-release-unsigned.apk`. Para producción, configura tu `signingConfig` en `app/build.gradle.kts` con tu keystore.
+---
+
+## 🌟 5. Características del Pipeline de Edición No Destructiva
+
+- **Canvas Viewport:** Gestos multitáctiles fluidos (zoom, pan, rotación libre, doble toque para zoom inteligente y reset de vista).
+- **Ajustes Cromáticos Globales:** Brillo, contraste, saturación, exposición, temperatura y tinte calculados en `RenderPipeline`.
+- **Geometría y Recorte:** Rotación 90° paso a paso, volteo horizontal/vertical, enderezado fino continuo (-45° a +45°) y recorte libre o con relaciones de aspecto fijas (1:1, 4:3, 16:9, 3:2, 9:16).
+- **Filtros y Presets:** 8 filtros estilizados (B&N, Sepia, Vívido, Cine, Cálido, Frío, Dramático, Noir) con intensidad regulable (0% - 100%) y guardado de presets personalizados del usuario.
+- **Historial Completo:** Pila atómica de 50 niveles para `Undo` / `Redo` que cubre todas las operaciones.
+- **Gestión de Capas:** Capas de tinte cromático y duplicados de imagen con 6 modos de fusión (`Normal`, `Multiply`, `Screen`, `Overlay`, `Darken`, `Lighten`), control de opacidad individual y reordenamiento de capas.
+- **Máscaras y Selecciones:** 4 tipos de selección (Rectangular, Elíptica, Lazo poligonal, Brocha/Borrador), inversión de máscara, suavizado perimetral (*feather* de 0 a 40px) y ajustes cromáticos localizados.
+- **Retoque Creativo:** Pincel libre con paleta de colores, selector de grosor y opacidad, borrador de trazos, inserción de texto tipográfico editable multilínea (Sans, Serif, Monospace, Cursive) y tampón de clonación básico (*clone stamp*) con bordes difuminados.
+- **Exportación de Alta Calidad:** Guardado de imagen final no destructiva directamente en la galería del sistema mediante `MediaStore` e inserción en el flujo de retorno de la galería llamante.

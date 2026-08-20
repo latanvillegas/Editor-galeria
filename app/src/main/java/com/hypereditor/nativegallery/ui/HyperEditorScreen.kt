@@ -1496,7 +1496,7 @@ private fun MaskCard(
                 max = 40f,
                 defaultValue = 0f,
                 unitSuffix = "px",
-                onFeatherChange = onFeatherChange
+                onValueChange = onFeatherChange
             )
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))

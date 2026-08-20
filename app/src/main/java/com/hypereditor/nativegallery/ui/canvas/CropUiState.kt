@@ -72,13 +72,23 @@ class CropUiState(
         val newScale = (scale * zoomFactor).coerceIn(1.0f, 6.0f)
         scale = newScale
 
-        // Calculate maximum allowable pan so image edges cover the crop frame
-        // When scale is 1.0, scaled image fits the frame, max pan is 0
-        // When scale > 1.0, allowable pan is (scaledDim - frameDim) / 2
-        val scaledW = frameWidth * scale
-        val scaledH = frameHeight * scale
-        val maxPanX = ((scaledW - frameWidth) / 2f).coerceAtLeast(0f)
-        val maxPanY = ((scaledH - frameHeight) / 2f).coerceAtLeast(0f)
+        // Determine effective image dimensions taking orthogonal rotation into account
+        val isOrthogonalSwapped = ((rotation / 90f).toInt() % 2 != 0)
+        val effImgW = if (isOrthogonalSwapped) imgHeight else imgWidth
+        val effImgH = if (isOrthogonalSwapped) imgWidth else imgHeight
+
+        val baseScale = if (effImgW > 0f && effImgH > 0f) {
+            maxOf(frameWidth / effImgW, frameHeight / effImgH)
+        } else {
+            1.0f
+        }
+
+        val renderedW = (if (effImgW > 0f) effImgW * baseScale else frameWidth) * scale
+        val renderedH = (if (effImgH > 0f) effImgH * baseScale else frameHeight) * scale
+
+        // Max pan allowed before uncovering empty space
+        val maxPanX = ((renderedW - frameWidth) / 2f).coerceAtLeast(0f)
+        val maxPanY = ((renderedH - frameHeight) / 2f).coerceAtLeast(0f)
 
         offsetX = (offsetX + pan.x).coerceIn(-maxPanX, maxPanX)
         offsetY = (offsetY + pan.y).coerceIn(-maxPanY, maxPanY)

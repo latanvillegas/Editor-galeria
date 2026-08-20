@@ -29,13 +29,21 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
+          gradle-version: '8.7'
           validate-wrappers: false
 
-      - name: Grant Execute Permission to Gradle Wrapper
-        run: chmod +x ./gradlew
+      - name: Repair and Grant Permissions to Gradle Wrapper
+        run: |
+          gradle wrapper --gradle-version 8.7 --distribution-type bin || true
+          chmod +x ./gradlew || true
 
       - name: Assemble Debug APK
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+        run: |
+          if [ -f "./gradlew" ]; then
+            ./gradlew assembleDebug --no-daemon --stacktrace || gradle assembleDebug --no-daemon --stacktrace
+          else
+            gradle assembleDebug --no-daemon --stacktrace
+          fi
 
       - name: Locate and Stage Debug APK
         run: |

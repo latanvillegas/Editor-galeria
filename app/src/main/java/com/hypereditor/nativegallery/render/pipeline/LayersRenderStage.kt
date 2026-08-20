@@ -54,6 +54,32 @@ class LayersRenderStage : RenderStage {
                 }
                 canvas.drawBitmap(bmp, matrix, paint)
             }
+            LayerType.TEXT -> {
+                if (!layer.text.isNullOrBlank()) {
+                    paint.color = layer.textColor.toInt()
+                    paint.textSize = layer.textSize * (canvas.width / 800f).coerceAtLeast(0.5f)
+                    paint.textAlign = Paint.Align.CENTER
+                    val x = (canvas.width / 2f) + layer.offsetX
+                    val y = (canvas.height / 2f) + layer.offsetY
+                    canvas.save()
+                    canvas.rotate(layer.rotationDegrees, x, y)
+                    canvas.scale(layer.scale, layer.scale, x, y)
+                    canvas.drawText(layer.text, x, y, paint)
+                    canvas.restore()
+                }
+            }
+            LayerType.STICKER -> {
+                val emoji = layer.stickerEmoji ?: "⭐"
+                paint.textSize = layer.textSize * 1.5f * (canvas.width / 800f).coerceAtLeast(0.5f)
+                paint.textAlign = Paint.Align.CENTER
+                val x = (canvas.width / 2f) + layer.offsetX
+                val y = (canvas.height / 2f) + layer.offsetY
+                canvas.save()
+                canvas.rotate(layer.rotationDegrees, x, y)
+                canvas.scale(layer.scale, layer.scale, x, y)
+                canvas.drawText(emoji, x, y, paint)
+                canvas.restore()
+            }
         }
     }
 }

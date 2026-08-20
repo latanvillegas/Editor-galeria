@@ -62,6 +62,9 @@ sealed interface EditorIntent {
     // Layers
     data class AddColorLayer(val name: String, val colorHex: Long, val blendMode: LayerBlendMode = LayerBlendMode.OVERLAY, val opacity: Float = 0.5f) : EditorIntent
     data class AddDuplicateImageLayer(val name: String = "Capa Duplicada", val blendMode: LayerBlendMode = LayerBlendMode.SCREEN, val opacity: Float = 0.7f) : EditorIntent
+    data class AddTextLayer(val text: String, val textSize: Float = 48f, val textColor: Long = 0xFFFFFFFF, val blendMode: LayerBlendMode = LayerBlendMode.NORMAL, val opacity: Float = 1.0f) : EditorIntent
+    data class AddStickerLayer(val emoji: String, val blendMode: LayerBlendMode = LayerBlendMode.NORMAL, val opacity: Float = 1.0f) : EditorIntent
+    data class UpdateLayerTransform(val layerId: String, val offsetX: Float, val offsetY: Float, val scale: Float, val rotation: Float) : EditorIntent
     data class ToggleLayerVisibility(val layerId: String) : EditorIntent
     data class UpdateLayerOpacity(val layerId: String, val opacity: Float) : EditorIntent
     data class UpdateLayerBlendMode(val layerId: String, val blendMode: LayerBlendMode) : EditorIntent
@@ -72,6 +75,8 @@ sealed interface EditorIntent {
 
     // Geometry & Crop
     data class UpdateCropTransform(val cropTransform: EditOperation.CropTransform) : EditorIntent
+    data class SetCropAspectRatio(val aspectRatio: CropAspectRatio) : EditorIntent
+    data class ToggleCropRuleOfThirds(val show: Boolean) : EditorIntent
     data object Rotate90Clockwise : EditorIntent
     data object Rotate90CounterClockwise : EditorIntent
     data object ToggleFlipHorizontal : EditorIntent

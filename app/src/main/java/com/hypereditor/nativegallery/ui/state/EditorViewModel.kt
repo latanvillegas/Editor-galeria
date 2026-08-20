@@ -150,6 +150,9 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             // Layers
             is EditorIntent.AddColorLayer -> addColorLayer(intent.name, intent.colorHex, intent.blendMode, intent.opacity)
             is EditorIntent.AddDuplicateImageLayer -> addDuplicateImageLayer(intent.name, intent.blendMode, intent.opacity)
+            is EditorIntent.AddTextLayer -> addTextLayer(intent.text, intent.textSize, intent.textColor, intent.blendMode, intent.opacity)
+            is EditorIntent.AddStickerLayer -> addStickerLayer(intent.emoji, intent.blendMode, intent.opacity)
+            is EditorIntent.UpdateLayerTransform -> updateLayerTransform(intent.layerId, intent.offsetX, intent.offsetY, intent.scale, intent.rotation)
             is EditorIntent.ToggleLayerVisibility -> toggleLayerVisibility(intent.layerId)
             is EditorIntent.UpdateLayerOpacity -> updateLayerOpacity(intent.layerId, intent.opacity)
             is EditorIntent.UpdateLayerBlendMode -> updateLayerBlendMode(intent.layerId, intent.blendMode)
@@ -160,6 +163,12 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
 
             // Geometry & Crop
             is EditorIntent.UpdateCropTransform -> mutateDocument { it.copy(cropTransform = intent.cropTransform) }
+            is EditorIntent.SetCropAspectRatio -> mutateDocument { doc ->
+                doc.copy(cropTransform = doc.cropTransform.copy(aspectRatio = intent.aspectRatio, scale = 1.0f, panXNorm = 0f, panYNorm = 0f))
+            }
+            is EditorIntent.ToggleCropRuleOfThirds -> mutateDocument { doc ->
+                doc.copy(cropTransform = doc.cropTransform.copy(showRuleOfThirds = intent.show))
+            }
             is EditorIntent.Rotate90Clockwise -> mutateDocument { doc ->
                 val nextRot = (doc.cropTransform.rotation90Degrees + 90) % 360
                 doc.copy(cropTransform = doc.cropTransform.copy(rotation90Degrees = nextRot))
@@ -191,10 +200,14 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             is EditorIntent.ResetCrop -> mutateDocument { doc ->
                 doc.copy(
                     cropTransform = doc.cropTransform.copy(
+                        scale = 1.0f,
+                        panXNorm = 0f,
+                        panYNorm = 0f,
                         cropLeftNorm = 0f,
                         cropTopNorm = 0f,
                         cropRightNorm = 1f,
-                        cropBottomNorm = 1f
+                        cropBottomNorm = 1f,
+                        aspectRatio = CropAspectRatio.ORIGINAL
                     )
                 )
             }
@@ -373,6 +386,48 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             doc.copy(layers = doc.layers + newLayer)
         }
         _uiState.update { it.copy(activeLayerId = newLayer.id) }
+    }
+
+    private fun addTextLayer(text: String, textSize: Float, textColor: Long, blendMode: LayerBlendMode, opacity: Float) {
+        val count = (_uiState.value.document?.layers?.size ?: 0) + 1
+        val newLayer = LayerModel(
+            name = "Texto $count",
+            layerType = LayerType.TEXT,
+            text = text,
+            textSize = textSize,
+            textColor = textColor,
+            blendMode = blendMode,
+            opacity = opacity
+        )
+        mutateDocument { doc ->
+            doc.copy(layers = doc.layers + newLayer)
+        }
+        _uiState.update { it.copy(activeLayerId = newLayer.id) }
+    }
+
+    private fun addStickerLayer(emoji: String, blendMode: LayerBlendMode, opacity: Float) {
+        val count = (_uiState.value.document?.layers?.size ?: 0) + 1
+        val newLayer = LayerModel(
+            name = "Sticker $count $emoji",
+            layerType = LayerType.STICKER,
+            stickerEmoji = emoji,
+            blendMode = blendMode,
+            opacity = opacity
+        )
+        mutateDocument { doc ->
+            doc.copy(layers = doc.layers + newLayer)
+        }
+        _uiState.update { it.copy(activeLayerId = newLayer.id) }
+    }
+
+    private fun updateLayerTransform(layerId: String, offsetX: Float, offsetY: Float, scale: Float, rotation: Float) {
+        mutateDocument { doc ->
+            doc.copy(layers = doc.layers.map {
+                if (it.id == layerId) {
+                    it.copy(offsetX = offsetX, offsetY = offsetY, scale = scale, rotationDegrees = rotation)
+                } else it
+            })
+        }
     }
 
     private fun toggleLayerVisibility(layerId: String) {

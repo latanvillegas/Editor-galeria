@@ -1,7 +1,10 @@
 package com.hypereditor.nativegallery.render.pipeline
 
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Matrix
+import android.graphics.Paint
+import com.hypereditor.nativegallery.domain.model.CropAspectRatio
 import com.hypereditor.nativegallery.domain.model.EditorDocument
 
 class GeometryTransformStage : RenderStage {
@@ -9,15 +12,77 @@ class GeometryTransformStage : RenderStage {
 
     override fun process(input: Bitmap, document: EditorDocument): Bitmap {
         val crop = document.cropTransform
-        var intermediate = input
-        val srcW = intermediate.width
-        val srcH = intermediate.height
+        val srcW = input.width
+        val srcH = input.height
 
-        // 1. Recorte (Crop)
-        val hasCrop = crop.cropLeftNorm > 0.001f || crop.cropTopNorm > 0.001f ||
+        val totalRotation = (crop.rotation90Degrees.toFloat() + crop.fineStraightenAngle) % 360f
+        val hasRotation = Math.abs(totalRotation) > 0.01f
+        val hasFlip = crop.flipHorizontal || crop.flipVertical
+        val hasProCrop = crop.aspectRatio != CropAspectRatio.ORIGINAL ||
+                crop.scale > 1.001f ||
+                Math.abs(crop.panXNorm) > 0.001f ||
+                Math.abs(crop.panYNorm) > 0.001f
+
+        if (hasProCrop) {
+            val targetRatio = crop.aspectRatio.getCalculatedRatio(srcW, srcH)
+            val outW: Int
+            val outH: Int
+
+            if (targetRatio >= 1.0f) {
+                outW = srcW
+                outH = (srcW / targetRatio).toInt().coerceAtLeast(16)
+            } else {
+                outH = srcH
+                outW = (srcH * targetRatio).toInt().coerceAtLeast(16)
+            }
+
+            val outBitmap = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(outBitmap)
+
+            val matrix = Matrix()
+            // 1. Move source center to origin
+            matrix.postTranslate(-srcW / 2f, -srcH / 2f)
+
+            // 2. Flip
+            if (hasFlip) {
+                val scaleX = if (crop.flipHorizontal) -1f else 1f
+                val scaleY = if (crop.flipVertical) -1f else 1f
+                matrix.postScale(scaleX, scaleY)
+            }
+
+            // 3. Rotation
+            if (hasRotation) {
+                matrix.postRotate(totalRotation)
+            }
+
+            // 4. Calculate base scale to fill target crop frame
+            val rad = Math.toRadians(totalRotation.toDouble())
+            val absCos = Math.abs(Math.cos(rad)).toFloat()
+            val absSin = Math.abs(Math.sin(rad)).toFloat()
+            val rotatedSrcW = (srcW * absCos + srcH * absSin).coerceAtLeast(1f)
+            val rotatedSrcH = (srcW * absSin + srcH * absCos).coerceAtLeast(1f)
+
+            val baseScale = maxOf(outW / rotatedSrcW, outH / rotatedSrcH)
+            val finalScale = baseScale * crop.scale.coerceAtLeast(1.0f)
+            matrix.postScale(finalScale, finalScale)
+
+            // 5. User pan translation
+            val transX = (outW / 2f) + (crop.panXNorm * outW)
+            val transY = (outH / 2f) + (crop.panYNorm * outH)
+            matrix.postTranslate(transX, transY)
+
+            val paint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
+            canvas.drawBitmap(input, matrix, paint)
+
+            return outBitmap
+        }
+
+        // Standard Crop / Rotation fallback
+        var intermediate = input
+        val hasNormCrop = crop.cropLeftNorm > 0.001f || crop.cropTopNorm > 0.001f ||
                 crop.cropRightNorm < 0.999f || crop.cropBottomNorm < 0.999f
 
-        if (hasCrop) {
+        if (hasNormCrop) {
             val cropL = (crop.cropLeftNorm * srcW).toInt().coerceIn(0, srcW - 2)
             val cropT = (crop.cropTopNorm * srcH).toInt().coerceIn(0, srcH - 2)
             val cropR = (crop.cropRightNorm * srcW).toInt().coerceIn(cropL + 2, srcW)
@@ -26,11 +91,6 @@ class GeometryTransformStage : RenderStage {
             val cropH = (cropB - cropT).coerceAtLeast(1)
             intermediate = Bitmap.createBitmap(intermediate, cropL, cropT, cropW, cropH)
         }
-
-        // 2. Rotación, Enderezado y Flip
-        val totalRotation = (crop.rotation90Degrees.toFloat() + crop.fineStraightenAngle) % 360f
-        val hasRotation = totalRotation != 0f
-        val hasFlip = crop.flipHorizontal || crop.flipVertical
 
         if (hasRotation || hasFlip) {
             val matrix = Matrix()

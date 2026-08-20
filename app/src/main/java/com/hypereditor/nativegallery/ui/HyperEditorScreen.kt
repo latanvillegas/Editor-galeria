@@ -24,8 +24,10 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hypereditor.nativegallery.domain.model.*
+import com.hypereditor.nativegallery.ui.canvas.CropInteractiveCanvas
 import com.hypereditor.nativegallery.ui.canvas.EditorCanvas
 import com.hypereditor.nativegallery.ui.canvas.rememberCanvasViewportState
+import com.hypereditor.nativegallery.ui.canvas.rememberCropUiState
 import com.hypereditor.nativegallery.ui.state.EditorIntent
 import com.hypereditor.nativegallery.ui.state.EditorSectionTab
 import com.hypereditor.nativegallery.ui.state.EditorUiState
@@ -59,8 +61,12 @@ fun HyperEditorScreen(
     onClose: () -> Unit
 ) {
     val viewportState = rememberCanvasViewportState()
+    val cropUiState = rememberCropUiState(state.document?.cropTransform ?: EditOperation.CropTransform())
     var showSavePresetDialog by remember { mutableStateOf(false) }
     var newPresetName by remember { mutableStateOf("") }
+    var showAddTextLayerDialog by remember { mutableStateOf(false) }
+    var newTextLayerContent by remember { mutableStateOf("Texto de Capa") }
+    var showAddStickerDialog by remember { mutableStateOf(false) }
 
     if (state.isLoading) {
         Box(
@@ -148,6 +154,104 @@ fun HyperEditorScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showSavePresetDialog = false }) {
+                    Text("Cancelar", color = Color.LightGray)
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    }
+
+    // Dialog para agregar Capa de Texto
+    if (showAddTextLayerDialog) {
+        AlertDialog(
+            onDismissRequest = { showAddTextLayerDialog = false },
+            title = { Text("Nueva Capa de Texto", color = Color.White) },
+            text = {
+                Column {
+                    Text("Ingresa el texto que deseas superponer como capa independiente:", color = Color.LightGray, fontSize = 13.sp)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = newTextLayerContent,
+                        onValueChange = { newTextLayerContent = it },
+                        placeholder = { Text("Escribe tu texto aquí") },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (newTextLayerContent.isNotBlank()) {
+                            onIntent(EditorIntent.AddTextLayer(newTextLayerContent))
+                            newTextLayerContent = "Texto de Capa"
+                            showAddTextLayerDialog = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text("Agregar Capa", color = Color.Black)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddTextLayerDialog = false }) {
+                    Text("Cancelar", color = Color.LightGray)
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    }
+
+    // Dialog para agregar Capa de Sticker
+    if (showAddStickerDialog) {
+        val stickers = listOf("⭐", "🔥", "❤️", "🚀", "💡", "👑", "✨", "📸", "⚡", "🎉", "💎", "👍")
+        AlertDialog(
+            onDismissRequest = { showAddStickerDialog = false },
+            title = { Text("Seleccionar Sticker", color = Color.White) },
+            text = {
+                Column {
+                    Text("Elige un sticker para agregar como capa:", color = Color.LightGray, fontSize = 13.sp)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        stickers.take(6).forEach { emoji ->
+                            TextButton(
+                                onClick = {
+                                    onIntent(EditorIntent.AddStickerLayer(emoji))
+                                    showAddStickerDialog = false
+                                }
+                            ) {
+                                Text(emoji, fontSize = 24.sp)
+                            }
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        stickers.drop(6).take(6).forEach { emoji ->
+                            TextButton(
+                                onClick = {
+                                    onIntent(EditorIntent.AddStickerLayer(emoji))
+                                    showAddStickerDialog = false
+                                }
+                            ) {
+                                Text(emoji, fontSize = 24.sp)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showAddStickerDialog = false }) {
                     Text("Cancelar", color = Color.LightGray)
                 }
             },
@@ -331,14 +435,25 @@ fun HyperEditorScreen(
                 state.previewBitmap ?: state.originalBitmap
             }
 
-            // Viewport Canvas Area
-            EditorCanvas(
-                bitmap = bitmapToDisplay,
-                viewportState = viewportState,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-            )
+            // Viewport Canvas Area (Switches to Pro Interactive Crop in GEOMETRY_CROP tab)
+            if (state.selectedTab == EditorSectionTab.GEOMETRY_CROP) {
+                CropInteractiveCanvas(
+                    bitmap = state.originalBitmap,
+                    cropState = cropUiState,
+                    onCropTransformChanged = { onIntent(EditorIntent.UpdateCropTransform(it)) },
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                )
+            } else {
+                EditorCanvas(
+                    bitmap = bitmapToDisplay,
+                    viewportState = viewportState,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                )
+            }
 
             // Right Side: Modular Tools Panel with 6 Tabs
             Surface(
@@ -920,10 +1035,10 @@ fun HyperEditorScreen(
 
                                 Text(text = "Gestor de Capas", color = Color.White, fontSize = 15.sp)
 
-                                // Quick Add Layer Actions
+                                // Quick Add Layer Actions (Tinte, Duplicar, Texto, Sticker)
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     Button(
                                         onClick = {
@@ -937,12 +1052,10 @@ fun HyperEditorScreen(
                                             )
                                         },
                                         modifier = Modifier.weight(1f),
-                                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 8.dp),
+                                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
                                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                                     ) {
-                                        Icon(Icons.Default.FormatColorFill, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.Black)
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text("+ Tinte", color = Color.Black, fontSize = 12.sp)
+                                        Text("+ Tinte", color = Color.Black, fontSize = 11.sp)
                                     }
 
                                     Button(
@@ -956,12 +1069,28 @@ fun HyperEditorScreen(
                                             )
                                         },
                                         modifier = Modifier.weight(1f),
-                                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 8.dp),
+                                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
                                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                                     ) {
-                                        Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text("+ Duplicar", color = Color.White, fontSize = 12.sp)
+                                        Text("+ Duplicar", color = Color.White, fontSize = 11.sp)
+                                    }
+
+                                    Button(
+                                        onClick = { showAddTextLayerDialog = true },
+                                        modifier = Modifier.weight(1f),
+                                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                    ) {
+                                        Text("+ Texto", color = Color.White, fontSize = 11.sp)
+                                    }
+
+                                    Button(
+                                        onClick = { showAddStickerDialog = true },
+                                        modifier = Modifier.weight(1f),
+                                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                    ) {
+                                        Text("+ Sticker", color = Color.White, fontSize = 11.sp)
                                     }
                                 }
 
@@ -975,7 +1104,7 @@ fun HyperEditorScreen(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
-                                            text = "No hay capas adicionales.\nAgrega un tinte o duplica la imagen para fusionar capas.",
+                                            text = "No hay capas adicionales.\nAgrega un tinte, duplica la imagen, o añade textos/stickers.",
                                             color = Color.Gray,
                                             fontSize = 12.sp,
                                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -993,6 +1122,9 @@ fun HyperEditorScreen(
                                                 onToggleVisibility = { onIntent(EditorIntent.ToggleLayerVisibility(layer.id)) },
                                                 onOpacityChange = { onIntent(EditorIntent.UpdateLayerOpacity(layer.id, it)) },
                                                 onBlendModeChange = { onIntent(EditorIntent.UpdateLayerBlendMode(layer.id, it)) },
+                                                onTransformChange = { ox, oy, sc, rot ->
+                                                    onIntent(EditorIntent.UpdateLayerTransform(layer.id, ox, oy, sc, rot))
+                                                },
                                                 onMoveUp = { onIntent(EditorIntent.MoveLayerUp(layer.id)) },
                                                 onMoveDown = { onIntent(EditorIntent.MoveLayerDown(layer.id)) },
                                                 onDelete = { onIntent(EditorIntent.DeleteLayer(layer.id)) }
@@ -1010,12 +1142,34 @@ fun HyperEditorScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(text = "Transformación y Giro", color = Color.White, fontSize = 15.sp)
+                                    Text(text = "Recorte y Encuadre Pro", color = Color.White, fontSize = 15.sp)
                                     TextButton(
-                                        onClick = { onIntent(EditorIntent.ResetGeometry) },
+                                        onClick = {
+                                            cropUiState.reset()
+                                            onIntent(EditorIntent.ResetGeometry)
+                                        },
                                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                                     ) {
                                         Text("Restablecer Todo", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
+                                    }
+                                }
+
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = Color(0xFF1B202A),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "Arrastra la imagen para moverla dentro del marco o pellizca para hacer zoom. Doble toque para centrar.",
+                                            color = Color.LightGray,
+                                            fontSize = 11.sp
+                                        )
                                     }
                                 }
 
@@ -1044,6 +1198,7 @@ fun HyperEditorScreen(
                                         isActive = crop.flipHorizontal,
                                         modifier = Modifier.weight(1f)
                                     ) {
+                                        cropUiState.flipHorizontal = !cropUiState.flipHorizontal
                                         onIntent(EditorIntent.ToggleFlipHorizontal)
                                     }
                                     ActionButton(
@@ -1052,6 +1207,7 @@ fun HyperEditorScreen(
                                         isActive = crop.flipVertical,
                                         modifier = Modifier.weight(1f)
                                     ) {
+                                        cropUiState.flipVertical = !cropUiState.flipVertical
                                         onIntent(EditorIntent.ToggleFlipVertical)
                                     }
                                 }
@@ -1066,41 +1222,88 @@ fun HyperEditorScreen(
                                     max = 45.0f,
                                     defaultValue = 0.0f,
                                     unitSuffix = "°",
-                                    onValueChange = { onIntent(EditorIntent.UpdateStraightenAngle(it)) }
+                                    onValueChange = {
+                                        cropUiState.rotation = crop.rotation90Degrees.toFloat() + it
+                                        onIntent(EditorIntent.UpdateStraightenAngle(it))
+                                    }
                                 )
 
                                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
 
+                                // Regla de Tercios Toggle & Reset
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(text = "Guías de composición (3×3)", color = Color.LightGray, fontSize = 13.sp)
+                                    Switch(
+                                        checked = cropUiState.showRuleOfThirds,
+                                        onCheckedChange = {
+                                            cropUiState.showRuleOfThirds = it
+                                            onIntent(EditorIntent.ToggleCropRuleOfThirds(it))
+                                        }
+                                    )
+                                }
+
+                                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+
                                 // Aspect Ratio Crop Presets
-                                Text(
-                                    text = "Relación de Aspecto (Crop)",
-                                    color = Color.White,
-                                    fontSize = 14.sp
-                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Proporción de Recorte",
+                                        color = Color.White,
+                                        fontSize = 14.sp
+                                    )
+                                    TextButton(
+                                        onClick = {
+                                            cropUiState.reset()
+                                            onIntent(EditorIntent.ResetCrop)
+                                        }
+                                    ) {
+                                        Text("Reiniciar Marco", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
+                                    }
+                                }
 
                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                         RatioChip("Original", modifier = Modifier.weight(1f)) {
-                                            onIntent(EditorIntent.ResetCrop)
+                                            cropUiState.aspectRatio = CropAspectRatio.ORIGINAL
+                                            onIntent(EditorIntent.SetCropAspectRatio(CropAspectRatio.ORIGINAL))
                                         }
                                         RatioChip("1:1 Cuadrado", modifier = Modifier.weight(1f)) {
-                                            onIntent(EditorIntent.ApplyAspectRatioCrop(1f, 1f))
+                                            cropUiState.aspectRatio = CropAspectRatio.RATIO_1_1
+                                            onIntent(EditorIntent.SetCropAspectRatio(CropAspectRatio.RATIO_1_1))
                                         }
                                     }
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        RatioChip("4:3 Estándar", modifier = Modifier.weight(1f)) {
-                                            onIntent(EditorIntent.ApplyAspectRatioCrop(4f, 3f))
+                                        RatioChip("4:5 Retrato / IG", modifier = Modifier.weight(1f)) {
+                                            cropUiState.aspectRatio = CropAspectRatio.RATIO_4_5
+                                            onIntent(EditorIntent.SetCropAspectRatio(CropAspectRatio.RATIO_4_5))
                                         }
                                         RatioChip("16:9 Panorámico", modifier = Modifier.weight(1f)) {
-                                            onIntent(EditorIntent.ApplyAspectRatioCrop(16f, 9f))
+                                            cropUiState.aspectRatio = CropAspectRatio.RATIO_16_9
+                                            onIntent(EditorIntent.SetCropAspectRatio(CropAspectRatio.RATIO_16_9))
+                                        }
+                                    }
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        RatioChip("9:16 Historia / Reels", modifier = Modifier.weight(1f)) {
+                                            cropUiState.aspectRatio = CropAspectRatio.RATIO_9_16
+                                            onIntent(EditorIntent.SetCropAspectRatio(CropAspectRatio.RATIO_9_16))
+                                        }
+                                        RatioChip("4:3 Estándar", modifier = Modifier.weight(1f)) {
+                                            cropUiState.aspectRatio = CropAspectRatio.RATIO_4_3
+                                            onIntent(EditorIntent.SetCropAspectRatio(CropAspectRatio.RATIO_4_3))
                                         }
                                     }
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                         RatioChip("3:2 Clásico", modifier = Modifier.weight(1f)) {
-                                            onIntent(EditorIntent.ApplyAspectRatioCrop(3f, 2f))
-                                        }
-                                        RatioChip("9:16 Vertical", modifier = Modifier.weight(1f)) {
-                                            onIntent(EditorIntent.ApplyAspectRatioCrop(9f, 16f))
+                                            cropUiState.aspectRatio = CropAspectRatio.RATIO_3_2
+                                            onIntent(EditorIntent.SetCropAspectRatio(CropAspectRatio.RATIO_3_2))
                                         }
                                     }
                                 }
@@ -1279,11 +1482,20 @@ private fun LayerCard(
     onToggleVisibility: () -> Unit,
     onOpacityChange: (Float) -> Unit,
     onBlendModeChange: (LayerBlendMode) -> Unit,
+    onTransformChange: (offsetX: Float, offsetY: Float, scale: Float, rotation: Float) -> Unit = { _, _, _, _ -> },
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
     onDelete: () -> Unit
 ) {
     var expandedBlendMenu by remember { mutableStateOf(false) }
+    var showTransformControls by remember { mutableStateOf(false) }
+
+    val typeLabel = when (layer.layerType) {
+        LayerType.COLOR_FILL -> "Tinte"
+        LayerType.IMAGE_DUPLICATE -> "Imagen"
+        LayerType.TEXT -> "Texto"
+        LayerType.STICKER -> "Sticker"
+    }
 
     Surface(
         shape = RoundedCornerShape(10.dp),
@@ -1295,7 +1507,7 @@ private fun LayerCard(
                 .fillMaxWidth()
                 .padding(12.dp)
         ) {
-            // Header: Visibility + Title + Reorder + Delete
+            // Header: Visibility + Title + Type Badge + Reorder + Delete
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -1311,11 +1523,24 @@ private fun LayerCard(
                         )
                     }
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = layer.name,
-                        color = if (layer.isVisible) Color.White else Color.Gray,
-                        fontSize = 13.sp
-                    )
+                    Column {
+                        Text(
+                            text = layer.name,
+                            color = if (layer.isVisible) Color.White else Color.Gray,
+                            fontSize = 13.sp
+                        )
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = typeLabel,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontSize = 9.sp,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                            )
+                        }
+                    }
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1420,6 +1645,46 @@ private fun LayerCard(
                     inactiveTrackColor = Color(0xFF1E2128)
                 )
             )
+
+            // Layer Transform Controls (For Text, Sticker, Duplicate Image)
+            if (layer.layerType == LayerType.TEXT || layer.layerType == LayerType.STICKER || layer.layerType == LayerType.IMAGE_DUPLICATE) {
+                HorizontalDivider(color = Color(0xFF1E2128), modifier = Modifier.padding(vertical = 4.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showTransformControls = !showTransformControls }
+                        .padding(vertical = 2.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Transformación (Posición / Zoom / Giro)",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 11.sp
+                    )
+                    Icon(
+                        imageVector = if (showTransformControls) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+
+                if (showTransformControls) {
+                    AdjustmentSlider("Posición X", layer.offsetX, -300f, 300f, 0f, unitSuffix = "px") {
+                        onTransformChange(it, layer.offsetY, layer.scale, layer.rotationDegrees)
+                    }
+                    AdjustmentSlider("Posición Y", layer.offsetY, -300f, 300f, 0f, unitSuffix = "px") {
+                        onTransformChange(layer.offsetX, it, layer.scale, layer.rotationDegrees)
+                    }
+                    AdjustmentSlider("Escala (Zoom)", layer.scale, 0.2f, 3.0f, 1.0f) {
+                        onTransformChange(layer.offsetX, layer.offsetY, it, layer.rotationDegrees)
+                    }
+                    AdjustmentSlider("Rotación", layer.rotationDegrees, -180f, 180f, 0f, unitSuffix = "°") {
+                        onTransformChange(layer.offsetX, layer.offsetY, layer.scale, it)
+                    }
+                }
+            }
         }
     }
 }

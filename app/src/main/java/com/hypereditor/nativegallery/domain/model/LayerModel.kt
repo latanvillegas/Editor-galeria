@@ -16,7 +16,9 @@ enum class LayerBlendMode {
 
 enum class LayerType {
     IMAGE_DUPLICATE,
-    COLOR_FILL
+    COLOR_FILL,
+    TEXT,
+    STICKER
 }
 
 @Parcelize
@@ -32,5 +34,9 @@ data class LayerModel(
     val offsetY: Float = 0f,
     val scale: Float = 1.0f,
     val rotationDegrees: Float = 0f,
+    val text: String? = null,
+    val textSize: Float = 48f,
+    val textColor: Long = 0xFFFFFFFF,
+    val stickerEmoji: String? = null,
     val bitmap: Bitmap? = null
 ) : Parcelable

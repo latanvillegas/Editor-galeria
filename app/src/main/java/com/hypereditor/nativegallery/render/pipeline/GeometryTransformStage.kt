@@ -24,7 +24,12 @@ class GeometryTransformStage : RenderStage {
                 Math.abs(crop.panYNorm) > 0.001f
 
         if (hasProCrop) {
-            val targetRatio = crop.aspectRatio.getCalculatedRatio(srcW, srcH)
+            val targetRatio = when (crop.aspectRatio) {
+                CropAspectRatio.ORIGINAL -> srcW.toFloat() / srcH.toFloat()
+                CropAspectRatio.FREE -> srcW.toFloat() / srcH.toFloat()
+                else -> crop.aspectRatio.getCalculatedRatio(srcW, srcH)
+            }
+
             val outW: Int
             val outH: Int
 
@@ -55,18 +60,12 @@ class GeometryTransformStage : RenderStage {
                 matrix.postRotate(totalRotation)
             }
 
-            // 4. Calculate base scale to fill target crop frame
-            val rad = Math.toRadians(totalRotation.toDouble())
-            val absCos = Math.abs(Math.cos(rad)).toFloat()
-            val absSin = Math.abs(Math.sin(rad)).toFloat()
-            val rotatedSrcW = (srcW * absCos + srcH * absSin).coerceAtLeast(1f)
-            val rotatedSrcH = (srcW * absSin + srcH * absCos).coerceAtLeast(1f)
-
-            val baseScale = maxOf(outW / rotatedSrcW, outH / rotatedSrcH)
+            // 4. Calculate base scale so image fills crop frame (ContentScale.Crop equivalent)
+            val baseScale = maxOf(outW.toFloat() / srcW.toFloat(), outH.toFloat() / srcH.toFloat())
             val finalScale = baseScale * crop.scale.coerceAtLeast(1.0f)
             matrix.postScale(finalScale, finalScale)
 
-            // 5. User pan translation
+            // 5. User pan translation matching interactive canvas pixel-for-pixel
             val transX = (outW / 2f) + (crop.panXNorm * outW)
             val transY = (outH / 2f) + (crop.panYNorm * outH)
             matrix.postTranslate(transX, transY)

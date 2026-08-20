@@ -41,7 +41,8 @@ sealed interface EditOperation : Parcelable {
         val panXNorm: Float = 0f,
         val panYNorm: Float = 0f,
         val aspectRatio: CropAspectRatio = CropAspectRatio.ORIGINAL,
-        val showRuleOfThirds: Boolean = true
+        val showRuleOfThirds: Boolean = true,
+        val scaleMode: CropScaleMode = CropScaleMode.FIT
     ) : EditOperation
 
     @Parcelize

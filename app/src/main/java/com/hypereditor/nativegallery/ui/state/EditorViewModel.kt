@@ -166,6 +166,14 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             is EditorIntent.SetCropAspectRatio -> mutateDocument { doc ->
                 doc.copy(cropTransform = doc.cropTransform.copy(aspectRatio = intent.aspectRatio, scale = 1.0f, panXNorm = 0f, panYNorm = 0f))
             }
+            is EditorIntent.SetCropScaleMode -> mutateDocument { doc ->
+                val newScale = when (intent.scaleMode) {
+                    CropScaleMode.FIT -> 1.0f
+                    CropScaleMode.FILL -> 1.25f
+                    CropScaleMode.CENTER -> 1.0f
+                }
+                doc.copy(cropTransform = doc.cropTransform.copy(scaleMode = intent.scaleMode, scale = newScale, panXNorm = 0f, panYNorm = 0f))
+            }
             is EditorIntent.ToggleCropRuleOfThirds -> mutateDocument { doc ->
                 doc.copy(cropTransform = doc.cropTransform.copy(showRuleOfThirds = intent.show))
             }

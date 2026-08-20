@@ -8,6 +8,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import com.hypereditor.nativegallery.domain.model.CropAspectRatio
+import com.hypereditor.nativegallery.domain.model.CropScaleMode
 import com.hypereditor.nativegallery.domain.model.EditOperation
 
 class CropUiState(
@@ -18,7 +19,8 @@ class CropUiState(
     initialAspectRatio: CropAspectRatio = CropAspectRatio.ORIGINAL,
     initialShowGrid: Boolean = true,
     initialFlipH: Boolean = false,
-    initialFlipV: Boolean = false
+    initialFlipV: Boolean = false,
+    initialScaleMode: CropScaleMode = CropScaleMode.FIT
 ) {
     var scale by mutableFloatStateOf(initialScale)
     var offsetX by mutableFloatStateOf(0f)
@@ -28,6 +30,8 @@ class CropUiState(
     var showRuleOfThirds by mutableStateOf(initialShowGrid)
     var flipHorizontal by mutableStateOf(initialFlipH)
     var flipVertical by mutableStateOf(initialFlipV)
+    var scaleMode by mutableStateOf(initialScaleMode)
+    var isInteracting by mutableStateOf(false)
 
     val isModified: Boolean
         get() = scale != 1.0f || offsetX != 0f || offsetY != 0f || rotation != 0f ||
@@ -41,25 +45,70 @@ class CropUiState(
         aspectRatio = CropAspectRatio.ORIGINAL
         flipHorizontal = false
         flipVertical = false
+        scaleMode = CropScaleMode.FIT
     }
 
     fun onDoubleTap() {
-        if (scale > 1.1f || offsetX != 0f || offsetY != 0f) {
+        if (scale > 1.05f || Math.abs(offsetX) > 1f || Math.abs(offsetY) > 1f) {
             scale = 1.0f
             offsetX = 0f
             offsetY = 0f
         } else {
-            scale = 2.0f
+            scale = 1.75f
         }
     }
 
-    fun updateTransform(pan: Offset, zoomFactor: Float, rotationDelta: Float = 0f) {
-        val newScale = (scale * zoomFactor).coerceIn(1.0f, 8.0f)
+    /**
+     * Updates transform with bounds clamping to avoid empty border areas.
+     */
+    fun updateTransformWithBounds(
+        pan: Offset,
+        zoomFactor: Float,
+        frameWidth: Float,
+        frameHeight: Float,
+        imgWidth: Float,
+        imgHeight: Float
+    ) {
+        val newScale = (scale * zoomFactor).coerceIn(1.0f, 6.0f)
         scale = newScale
-        offsetX += pan.x
-        offsetY += pan.y
-        if (rotationDelta != 0f) {
-            rotation = (rotation + rotationDelta) % 360f
+
+        // Calculate maximum allowable pan so image edges cover the crop frame
+        // When scale is 1.0, scaled image fits the frame, max pan is 0
+        // When scale > 1.0, allowable pan is (scaledDim - frameDim) / 2
+        val scaledW = frameWidth * scale
+        val scaledH = frameHeight * scale
+        val maxPanX = ((scaledW - frameWidth) / 2f).coerceAtLeast(0f)
+        val maxPanY = ((scaledH - frameHeight) / 2f).coerceAtLeast(0f)
+
+        offsetX = (offsetX + pan.x).coerceIn(-maxPanX, maxPanX)
+        offsetY = (offsetY + pan.y).coerceIn(-maxPanY, maxPanY)
+    }
+
+    fun applyStraighten(angle: Float) {
+        // Snapping: strong snap to 0° if within 0.8°
+        val snappedAngle = if (Math.abs(angle) < 0.8f) 0f else angle
+        val baseOrthogonal = ((rotation / 90f).toInt() * 90)
+        rotation = baseOrthogonal.toFloat() + snappedAngle
+    }
+
+    fun setScaleModePreset(mode: CropScaleMode) {
+        scaleMode = mode
+        when (mode) {
+            CropScaleMode.FIT -> {
+                scale = 1.0f
+                offsetX = 0f
+                offsetY = 0f
+            }
+            CropScaleMode.FILL -> {
+                scale = 1.35f
+                offsetX = 0f
+                offsetY = 0f
+            }
+            CropScaleMode.CENTER -> {
+                scale = 1.0f
+                offsetX = 0f
+                offsetY = 0f
+            }
         }
     }
 
@@ -78,7 +127,8 @@ class CropUiState(
             flipHorizontal = flipHorizontal,
             flipVertical = flipVertical,
             aspectRatio = aspectRatio,
-            showRuleOfThirds = showRuleOfThirds
+            showRuleOfThirds = showRuleOfThirds,
+            scaleMode = scaleMode
         )
     }
 
@@ -89,6 +139,7 @@ class CropUiState(
         showRuleOfThirds = transform.showRuleOfThirds
         flipHorizontal = transform.flipHorizontal
         flipVertical = transform.flipVertical
+        scaleMode = transform.scaleMode
         if (frameWidth > 0 && frameHeight > 0) {
             offsetX = transform.panXNorm * frameWidth
             offsetY = transform.panYNorm * frameHeight
@@ -109,7 +160,8 @@ fun rememberCropUiState(
             initialAspectRatio = initialTransform.aspectRatio,
             initialShowGrid = initialTransform.showRuleOfThirds,
             initialFlipH = initialTransform.flipHorizontal,
-            initialFlipV = initialTransform.flipVertical
+            initialFlipV = initialTransform.flipVertical,
+            initialScaleMode = initialTransform.scaleMode
         )
     }
 }

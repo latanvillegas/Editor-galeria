@@ -21,13 +21,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,7 +51,7 @@ fun CropInteractiveCanvas(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF0A0B0E))
+            .background(Color(0xFF090A0D))
             .onSizeChanged { containerSize = it },
         contentAlignment = Alignment.Center
     ) {
@@ -54,21 +59,24 @@ fun CropInteractiveCanvas(
             val originalRatio = bitmap.width.toFloat() / bitmap.height.toFloat()
             val targetRatio = when (cropState.aspectRatio) {
                 CropAspectRatio.ORIGINAL -> originalRatio
+                CropAspectRatio.FREE -> originalRatio
                 else -> cropState.aspectRatio.getCalculatedRatio(bitmap.width, bitmap.height)
             }
 
-            // Animate target ratio change smoothly
+            // Animate target ratio change smoothly (Snapseed smooth morph)
             val animatedRatio by animateFloatAsState(
                 targetValue = targetRatio,
-                animationSpec = tween(durationMillis = 280),
+                animationSpec = tween(durationMillis = 260),
                 label = "CropAspectRatioAnimation"
             )
 
-            val maxAvailW = (containerSize.width - 48).toFloat().coerceAtLeast(100f)
-            val maxAvailH = (containerSize.height - 48).toFloat().coerceAtLeast(100f)
+            val paddingHorizontal = 48f
+            val paddingVertical = 48f
+            val maxAvailW = (containerSize.width - paddingHorizontal).coerceAtLeast(100f)
+            val maxAvailH = (containerSize.height - paddingVertical).coerceAtLeast(100f)
 
-            var frameW: Float
-            var frameH: Float
+            val frameW: Float
+            val frameH: Float
 
             if (maxAvailW / maxAvailH > animatedRatio) {
                 frameH = maxAvailH
@@ -78,17 +86,16 @@ fun CropInteractiveCanvas(
                 frameH = frameW / animatedRatio
             }
 
-            // Outer Canvas for darkened backdrop, aperture, rule of thirds, and corner brackets
+            val density = LocalDensity.current
+            val frameWDp = with(density) { frameW.toDp() }
+            val frameHDp = with(density) { frameH.toDp() }
+
+            // Container Box holding the interactive image inside the active framing aperture
             Box(
                 modifier = Modifier
-                    .size(
-                        width = (frameW / containerSize.width.toFloat() * 100).let { frameW.dp },
-                        height = (frameH / containerSize.height.toFloat() * 100).let { frameH.dp }
-                    )
-                    .width(androidx.compose.ui.platform.LocalDensity.current.run { frameW.toDp() })
-                    .height(androidx.compose.ui.platform.LocalDensity.current.run { frameH.toDp() })
+                    .size(width = frameWDp, height = frameHDp)
                     .clipToBounds()
-                    .pointerInput(cropState.aspectRatio) {
+                    .pointerInput(cropState.aspectRatio, frameW, frameH) {
                         detectTapGestures(
                             onDoubleTap = {
                                 cropState.onDoubleTap()
@@ -96,18 +103,26 @@ fun CropInteractiveCanvas(
                             }
                         )
                     }
-                    .pointerInput(cropState.aspectRatio) {
-                        detectTransformGestures { _, pan, zoom, rotationDelta ->
-                            cropState.updateTransform(pan, zoom, rotationDelta)
+                    .pointerInput(cropState.aspectRatio, frameW, frameH) {
+                        detectTransformGestures { _, pan, zoom, _ ->
+                            cropState.isInteracting = true
+                            cropState.updateTransformWithBounds(
+                                pan = pan,
+                                zoomFactor = zoom,
+                                frameWidth = frameW,
+                                frameHeight = frameH,
+                                imgWidth = bitmap.width.toFloat(),
+                                imgHeight = bitmap.height.toFloat()
+                            )
                             onCropTransformChanged(cropState.toCropTransform(frameW, frameH))
                         }
                     },
                 contentAlignment = Alignment.Center
             ) {
-                // Interactive Transform Image Layer
+                // Interactive Transformed Image
                 Image(
                     bitmap = bitmap.asImageBitmap(),
-                    contentDescription = "Imagen de Recorte",
+                    contentDescription = "Imagen de Recorte Snapseed",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxSize()
@@ -119,60 +134,99 @@ fun CropInteractiveCanvas(
                             rotationZ = cropState.rotation
                         }
                 )
-
-                // Grid & Guides Overlay (Rule of Thirds + Framing Box)
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val w = size.width
-                    val h = size.height
-
-                    // 1. Frame Border
-                    drawRect(
-                        color = Color.White.copy(alpha = 0.85f),
-                        topLeft = Offset.Zero,
-                        size = Size(w, h),
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())
-                    )
-
-                    // 2. Rule of Thirds
-                    if (cropState.showRuleOfThirds) {
-                        val gridPaintColor = Color.White.copy(alpha = 0.35f)
-                        val strokeW = 1.dp.toPx()
-
-                        // Vertical lines
-                        drawLine(gridPaintColor, Offset(w / 3f, 0f), Offset(w / 3f, h), strokeWidth = strokeW)
-                        drawLine(gridPaintColor, Offset(w * 2f / 3f, 0f), Offset(w * 2f / 3f, h), strokeWidth = strokeW)
-
-                        // Horizontal lines
-                        drawLine(gridPaintColor, Offset(0f, h / 3f), Offset(w, h / 3f), strokeWidth = strokeW)
-                        drawLine(gridPaintColor, Offset(0f, h * 2f / 3f), Offset(w, h * 2f / 3f), strokeWidth = strokeW)
-                    }
-
-                    // 3. Corner Brackets (Lightroom / Photoshop style)
-                    val cornerLength = 20.dp.toPx()
-                    val cornerStroke = 4.dp.toPx()
-                    val cornerColor = Color(0xFF00ADB5)
-
-                    // Top-Left
-                    drawLine(cornerColor, Offset(0f, 0f), Offset(cornerLength, 0f), strokeWidth = cornerStroke)
-                    drawLine(cornerColor, Offset(0f, 0f), Offset(0f, cornerLength), strokeWidth = cornerStroke)
-
-                    // Top-Right
-                    drawLine(cornerColor, Offset(w - cornerLength, 0f), Offset(w, 0f), strokeWidth = cornerStroke)
-                    drawLine(cornerColor, Offset(w, 0f), Offset(w, cornerLength), strokeWidth = cornerStroke)
-
-                    // Bottom-Left
-                    drawLine(cornerColor, Offset(0f, h), Offset(cornerLength, h), strokeWidth = cornerStroke)
-                    drawLine(cornerColor, Offset(0f, h - cornerLength), Offset(0f, h), strokeWidth = cornerStroke)
-
-                    // Bottom-Right
-                    drawLine(cornerColor, Offset(w - cornerLength, h), Offset(w, h), strokeWidth = cornerStroke)
-                    drawLine(cornerColor, Offset(w, h - cornerLength), Offset(w, h), strokeWidth = cornerStroke)
-                }
             }
 
-            // HUD / Status pill on bottom
+            // Snapseed Darkened Mask Overlay + Professional Crop Aperture Lines
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val totalW = size.width
+                val totalH = size.height
+
+                val cropLeft = (totalW - frameW) / 2f
+                val cropTop = (totalH - frameH) / 2f
+                val cropRight = cropLeft + frameW
+                val cropBottom = cropTop + frameH
+
+                // 1. Dark Vignette / Snapseed Mask outside the crop aperture
+                val outerPath = Path().apply {
+                    addRect(Rect(0f, 0f, totalW, totalH))
+                }
+                val innerPath = Path().apply {
+                    addRect(Rect(cropLeft, cropTop, cropRight, cropBottom))
+                }
+                val maskPath = Path().apply {
+                    op(outerPath, innerPath, androidx.compose.ui.graphics.PathOperation.Difference)
+                }
+                drawPath(
+                    path = maskPath,
+                    color = Color(0xCC050608)
+                )
+
+                // 2. High-contrast Frame Border
+                drawRect(
+                    color = Color.White.copy(alpha = 0.9f),
+                    topLeft = Offset(cropLeft, cropTop),
+                    size = Size(frameW, frameH),
+                    style = Stroke(width = 1.8.dp.toPx())
+                )
+
+                // 3. Rule of Thirds Grid (Always visible when active or while rotating/fine-straightening)
+                val isFineRotating = Math.abs(cropState.rotation % 90f) > 0.05f
+                if (cropState.showRuleOfThirds || isFineRotating) {
+                    val gridColor = Color.White.copy(alpha = if (isFineRotating) 0.65f else 0.40f)
+                    val gridStroke = (if (isFineRotating) 1.2.dp else 1.0.dp).toPx()
+
+                    // Vertical lines
+                    val x1 = cropLeft + frameW / 3f
+                    val x2 = cropLeft + frameW * 2f / 3f
+                    drawLine(gridColor, Offset(x1, cropTop), Offset(x1, cropBottom), strokeWidth = gridStroke)
+                    drawLine(gridColor, Offset(x2, cropTop), Offset(x2, cropBottom), strokeWidth = gridStroke)
+
+                    // Horizontal lines
+                    val y1 = cropTop + frameH / 3f
+                    val y2 = cropTop + frameH * 2f / 3f
+                    drawLine(gridColor, Offset(cropLeft, y1), Offset(cropRight, y1), strokeWidth = gridStroke)
+                    drawLine(gridColor, Offset(cropLeft, y2), Offset(cropRight, y2), strokeWidth = gridStroke)
+
+                    // Dense Snapseed Straighten grid if fine rotating
+                    if (isFineRotating) {
+                        val denseGridColor = Color.White.copy(alpha = 0.22f)
+                        val subStroke = 0.75.dp.toPx()
+                        for (i in 1..5) {
+                            if (i % 2 != 0) {
+                                val subX = cropLeft + frameW * (i / 6f)
+                                val subY = cropTop + frameH * (i / 6f)
+                                drawLine(denseGridColor, Offset(subX, cropTop), Offset(subX, cropBottom), strokeWidth = subStroke)
+                                drawLine(denseGridColor, Offset(cropLeft, subY), Offset(cropRight, subY), strokeWidth = subStroke)
+                            }
+                        }
+                    }
+                }
+
+                // 4. Snapseed / Pro Corner Brackets (Thick accents at the 4 corners)
+                val cornerLength = 22.dp.toPx()
+                val cornerStroke = 3.8.dp.toPx()
+                val cornerColor = Color(0xFF00ADB5)
+
+                // Top-Left
+                drawLine(cornerColor, Offset(cropLeft - 1f, cropTop), Offset(cropLeft + cornerLength, cropTop), strokeWidth = cornerStroke)
+                drawLine(cornerColor, Offset(cropLeft, cropTop - 1f), Offset(cropLeft, cropTop + cornerLength), strokeWidth = cornerStroke)
+
+                // Top-Right
+                drawLine(cornerColor, Offset(cropRight - cornerLength, cropTop), Offset(cropRight + 1f, cropTop), strokeWidth = cornerStroke)
+                drawLine(cornerColor, Offset(cropRight, cropTop - 1f), Offset(cropRight, cropTop + cornerLength), strokeWidth = cornerStroke)
+
+                // Bottom-Left
+                drawLine(cornerColor, Offset(cropLeft - 1f, cropBottom), Offset(cropLeft + cornerLength, cropBottom), strokeWidth = cornerStroke)
+                drawLine(cornerColor, Offset(cropLeft, cropBottom - cornerLength), Offset(cropLeft, cropBottom + 1f), strokeWidth = cornerStroke)
+
+                // Bottom-Right
+                drawLine(cornerColor, Offset(cropRight - cornerLength, cropBottom), Offset(cropRight + 1f, cropBottom), strokeWidth = cornerStroke)
+                drawLine(cornerColor, Offset(cropRight, cropBottom - cornerLength), Offset(cropRight, cropBottom + 1f), strokeWidth = cornerStroke)
+            }
+
+            // HUD / Floating Feedback Pill
             AnimatedVisibility(
-                visible = cropState.isModified || cropState.scale > 1.05f,
+                visible = cropState.isModified || cropState.scale > 1.02f || Math.abs(cropState.rotation) > 0.05f,
                 enter = fadeIn(),
                 exit = fadeOut(),
                 modifier = Modifier
@@ -181,8 +235,9 @@ fun CropInteractiveCanvas(
             ) {
                 Surface(
                     shape = RoundedCornerShape(20.dp),
-                    color = Color(0xDD181A20),
-                    tonalElevation = 6.dp
+                    color = Color(0xEE16181F),
+                    tonalElevation = 6.dp,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF262933))
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
@@ -196,8 +251,14 @@ fun CropInteractiveCanvas(
                         )
 
                         Text(
-                            text = "Aspecto: ${cropState.aspectRatio.displayName.split(" ").first()}",
+                            text = "Giro: ${(cropState.rotation * 10).toInt() / 10f}°",
                             color = MaterialTheme.colorScheme.primary,
+                            fontSize = 12.sp
+                        )
+
+                        Text(
+                            text = "Proporción: ${cropState.aspectRatio.displayName.split(" ").first()}",
+                            color = Color.LightGray,
                             fontSize = 12.sp
                         )
 
@@ -210,7 +271,7 @@ fun CropInteractiveCanvas(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.RestartAlt,
-                                contentDescription = "Reset",
+                                contentDescription = "Reiniciar Recorte",
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(16.dp)
                             )

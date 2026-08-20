@@ -76,6 +76,7 @@ sealed interface EditorIntent {
     // Geometry & Crop
     data class UpdateCropTransform(val cropTransform: EditOperation.CropTransform) : EditorIntent
     data class SetCropAspectRatio(val aspectRatio: CropAspectRatio) : EditorIntent
+    data class SetCropScaleMode(val scaleMode: CropScaleMode) : EditorIntent
     data class ToggleCropRuleOfThirds(val show: Boolean) : EditorIntent
     data object Rotate90Clockwise : EditorIntent
     data object Rotate90CounterClockwise : EditorIntent

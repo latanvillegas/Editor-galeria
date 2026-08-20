@@ -1142,7 +1142,7 @@ fun HyperEditorScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(text = "Recorte y Encuadre Pro", color = Color.White, fontSize = 15.sp)
+                                    Text(text = "Recorte y Encuadre Snapseed", color = Color.White, fontSize = 15.sp)
                                     TextButton(
                                         onClick = {
                                             cropUiState.reset()
@@ -1166,12 +1166,33 @@ fun HyperEditorScreen(
                                         Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            text = "Arrastra la imagen para moverla dentro del marco o pellizca para hacer zoom. Doble toque para centrar.",
+                                            text = "Arrastra la imagen para reubicarla, pellizca para zoom. Doble toque para centrar/ajustar.",
                                             color = Color.LightGray,
                                             fontSize = 11.sp
                                         )
                                     }
                                 }
+
+                                // Modos de encuadre inicial (Auto-fit, Fill, Center)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    RatioChip("Ajustar (Fit)", modifier = Modifier.weight(1f)) {
+                                        cropUiState.setScaleModePreset(CropScaleMode.FIT)
+                                        onIntent(EditorIntent.SetCropScaleMode(CropScaleMode.FIT))
+                                    }
+                                    RatioChip("Llenar (Fill)", modifier = Modifier.weight(1f)) {
+                                        cropUiState.setScaleModePreset(CropScaleMode.FILL)
+                                        onIntent(EditorIntent.SetCropScaleMode(CropScaleMode.FILL))
+                                    }
+                                    RatioChip("Centrar", modifier = Modifier.weight(1f)) {
+                                        cropUiState.setScaleModePreset(CropScaleMode.CENTER)
+                                        onIntent(EditorIntent.SetCropScaleMode(CropScaleMode.CENTER))
+                                    }
+                                }
+
+                                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
 
                                 // Botones de Rotación 90° y Flips
                                 Row(
@@ -1214,7 +1235,7 @@ fun HyperEditorScreen(
 
                                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
 
-                                // Slider de Enderezado Fino (Straighten)
+                                // Slider de Enderezado Fino (Straighten con Snapping a 0°)
                                 AdjustmentSlider(
                                     label = "Enderezar (Ángulo fino)",
                                     value = crop.fineStraightenAngle,
@@ -1223,8 +1244,9 @@ fun HyperEditorScreen(
                                     defaultValue = 0.0f,
                                     unitSuffix = "°",
                                     onValueChange = {
-                                        cropUiState.rotation = crop.rotation90Degrees.toFloat() + it
-                                        onIntent(EditorIntent.UpdateStraightenAngle(it))
+                                        val angleWithSnap = if (Math.abs(it) < 0.8f) 0f else it
+                                        cropUiState.applyStraighten(angleWithSnap)
+                                        onIntent(EditorIntent.UpdateStraightenAngle(angleWithSnap))
                                     }
                                 )
 
@@ -1248,7 +1270,7 @@ fun HyperEditorScreen(
 
                                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
 
-                                // Aspect Ratio Crop Presets
+                                // Presets de Relación de Aspecto
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -1275,6 +1297,10 @@ fun HyperEditorScreen(
                                             cropUiState.aspectRatio = CropAspectRatio.ORIGINAL
                                             onIntent(EditorIntent.SetCropAspectRatio(CropAspectRatio.ORIGINAL))
                                         }
+                                        RatioChip("Libre", modifier = Modifier.weight(1f)) {
+                                            cropUiState.aspectRatio = CropAspectRatio.FREE
+                                            onIntent(EditorIntent.SetCropAspectRatio(CropAspectRatio.FREE))
+                                        }
                                         RatioChip("1:1 Cuadrado", modifier = Modifier.weight(1f)) {
                                             cropUiState.aspectRatio = CropAspectRatio.RATIO_1_1
                                             onIntent(EditorIntent.SetCropAspectRatio(CropAspectRatio.RATIO_1_1))
@@ -1285,22 +1311,34 @@ fun HyperEditorScreen(
                                             cropUiState.aspectRatio = CropAspectRatio.RATIO_4_5
                                             onIntent(EditorIntent.SetCropAspectRatio(CropAspectRatio.RATIO_4_5))
                                         }
+                                        RatioChip("3:4 Retrato", modifier = Modifier.weight(1f)) {
+                                            cropUiState.aspectRatio = CropAspectRatio.RATIO_3_4
+                                            onIntent(EditorIntent.SetCropAspectRatio(CropAspectRatio.RATIO_3_4))
+                                        }
+                                        RatioChip("5:4 Clásico", modifier = Modifier.weight(1f)) {
+                                            cropUiState.aspectRatio = CropAspectRatio.RATIO_5_4
+                                            onIntent(EditorIntent.SetCropAspectRatio(CropAspectRatio.RATIO_5_4))
+                                        }
+                                    }
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        RatioChip("2:3 Fotografía", modifier = Modifier.weight(1f)) {
+                                            cropUiState.aspectRatio = CropAspectRatio.RATIO_2_3
+                                            onIntent(EditorIntent.SetCropAspectRatio(CropAspectRatio.RATIO_2_3))
+                                        }
                                         RatioChip("16:9 Panorámico", modifier = Modifier.weight(1f)) {
                                             cropUiState.aspectRatio = CropAspectRatio.RATIO_16_9
                                             onIntent(EditorIntent.SetCropAspectRatio(CropAspectRatio.RATIO_16_9))
                                         }
-                                    }
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                         RatioChip("9:16 Historia / Reels", modifier = Modifier.weight(1f)) {
                                             cropUiState.aspectRatio = CropAspectRatio.RATIO_9_16
                                             onIntent(EditorIntent.SetCropAspectRatio(CropAspectRatio.RATIO_9_16))
                                         }
+                                    }
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                         RatioChip("4:3 Estándar", modifier = Modifier.weight(1f)) {
                                             cropUiState.aspectRatio = CropAspectRatio.RATIO_4_3
                                             onIntent(EditorIntent.SetCropAspectRatio(CropAspectRatio.RATIO_4_3))
                                         }
-                                    }
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                         RatioChip("3:2 Clásico", modifier = Modifier.weight(1f)) {
                                             cropUiState.aspectRatio = CropAspectRatio.RATIO_3_2
                                             onIntent(EditorIntent.SetCropAspectRatio(CropAspectRatio.RATIO_3_2))

@@ -396,7 +396,7 @@ fun HyperEditorScreen(
 
                     // Guardar y Retornar
                     Button(
-                        onClick = { onIntent(EditorIntent.SaveAndExport) },
+                        onClick = { onIntent(EditorIntent.SaveAndExport()) },
                         enabled = !state.isExporting,
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                     ) {

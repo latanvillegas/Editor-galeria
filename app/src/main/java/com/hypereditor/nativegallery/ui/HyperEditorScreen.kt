@@ -805,7 +805,7 @@ fun HyperEditorScreen(
                                         ) {
                                             listOf("SANS_SERIF", "SERIF", "MONOSPACE", "CURSIVE").forEach { font ->
                                                 OutlinedButton(
-                                                    onClick = { fontFont -> textFont = font },
+                                                    onClick = { textFont = font },
                                                     colors = ButtonDefaults.outlinedButtonColors(
                                                         containerColor = if (textFont == font) MaterialTheme.colorScheme.primary else Color.Transparent,
                                                         contentColor = if (textFont == font) Color.Black else Color.White

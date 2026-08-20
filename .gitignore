@@ -1,8 +1,30 @@
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Android build outputs
+**/build/
+app/build/
+dist_apk/
+
+# Node / Web preview scaffolding artifacts
 node_modules/
-build/
 dist/
 coverage/
-.DS_Store
 *.log
 .env*
-!.env.example
+!/.env.example
+bun.lock
+

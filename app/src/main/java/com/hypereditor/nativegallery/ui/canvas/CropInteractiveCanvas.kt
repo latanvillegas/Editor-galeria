@@ -86,6 +86,17 @@ fun CropInteractiveCanvas(
                 frameH = frameW / animatedRatio
             }
 
+            // Re-clamp whenever frame dimensions, aspect ratio, scale or rotation change
+            LaunchedEffect(frameW, frameH, bitmap.width, bitmap.height, cropState.aspectRatio, cropState.scale, cropState.rotation) {
+                cropState.clampToBounds(
+                    frameWidth = frameW,
+                    frameHeight = frameH,
+                    imgWidth = bitmap.width.toFloat(),
+                    imgHeight = bitmap.height.toFloat()
+                )
+                onCropTransformChanged(cropState.toCropTransform(frameW, frameH))
+            }
+
             val density = LocalDensity.current
             val frameWDp = with(density) { frameW.toDp() }
             val frameHDp = with(density) { frameH.toDp() }
@@ -99,6 +110,7 @@ fun CropInteractiveCanvas(
                         detectTapGestures(
                             onDoubleTap = {
                                 cropState.onDoubleTap()
+                                cropState.clampToBounds(frameW, frameH, bitmap.width.toFloat(), bitmap.height.toFloat())
                                 onCropTransformChanged(cropState.toCropTransform(frameW, frameH))
                             }
                         )

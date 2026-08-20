@@ -156,6 +156,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             is EditorIntent.ToggleLayerVisibility -> toggleLayerVisibility(intent.layerId)
             is EditorIntent.UpdateLayerOpacity -> updateLayerOpacity(intent.layerId, intent.opacity)
             is EditorIntent.UpdateLayerBlendMode -> updateLayerBlendMode(intent.layerId, intent.blendMode)
+            is EditorIntent.DuplicateLayer -> duplicateLayer(intent.layerId)
             is EditorIntent.MoveLayerUp -> moveLayer(intent.layerId, moveUp = true)
             is EditorIntent.MoveLayerDown -> moveLayer(intent.layerId, moveUp = false)
             is EditorIntent.DeleteLayer -> deleteLayer(intent.layerId)
@@ -227,7 +228,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             is EditorIntent.SetCompareOriginalMode -> _uiState.update { it.copy(isComparingOriginal = intent.isComparing) }
             is EditorIntent.Undo -> performUndo()
             is EditorIntent.Redo -> performRedo()
-            is EditorIntent.SaveAndExport -> performExport()
+            is EditorIntent.SaveAndExport -> performExport(intent.format, intent.quality)
         }
     }
 
@@ -475,6 +476,19 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    private fun duplicateLayer(layerId: String) {
+        val doc = _uiState.value.document ?: return
+        val targetLayer = doc.layers.find { it.id == layerId } ?: return
+        val duplicated = targetLayer.copy(
+            id = java.util.UUID.randomUUID().toString(),
+            name = "${targetLayer.name} (Copia)",
+            offsetX = targetLayer.offsetX + 24f,
+            offsetY = targetLayer.offsetY + 24f
+        )
+        mutateDocument { it.copy(layers = it.layers + duplicated) }
+        _uiState.update { it.copy(activeLayerId = duplicated.id) }
+    }
+
     private fun deleteLayer(layerId: String) {
         mutateDocument { doc ->
             doc.copy(layers = doc.layers.filterNot { it.id == layerId })
@@ -604,13 +618,16 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    private fun performExport() {
+    private fun performExport(
+        format: android.graphics.Bitmap.CompressFormat = android.graphics.Bitmap.CompressFormat.JPEG,
+        quality: Int = 95
+    ) {
         val baseBmp = _uiState.value.originalBitmap ?: return
         val doc = _uiState.value.document ?: return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isExporting = true) }
-            val saveResult = exportManager.renderAndExport(baseBmp, doc)
+            val saveResult = exportManager.renderAndExport(baseBmp, doc, format, quality)
             saveResult.onSuccess { finalUri ->
                 _uiState.update { it.copy(isExporting = false, exportedUri = finalUri) }
             }.onFailure { err ->

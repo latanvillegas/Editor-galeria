@@ -15,11 +15,17 @@ class ExportManager(
     suspend fun renderAndExport(
         baseBitmap: Bitmap,
         document: EditorDocument,
+        format: Bitmap.CompressFormat = Bitmap.CompressFormat.JPEG,
         quality: Int = 95
     ): Result<Uri> = withContext(Dispatchers.IO) {
         try {
             val fullResolution = renderPipeline.renderFullResolution(baseBitmap, document)
-            MediaStoreSaver.saveBitmapToGallery(context, fullResolution, quality = quality)
+            MediaStoreSaver.saveBitmapToGallery(
+                context = context,
+                bitmap = fullResolution,
+                format = format,
+                quality = quality
+            )
         } catch (e: Exception) {
             Result.failure(e)
         }

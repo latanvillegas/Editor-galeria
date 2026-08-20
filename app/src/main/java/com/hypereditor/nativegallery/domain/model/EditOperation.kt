@@ -18,9 +18,13 @@ sealed interface EditOperation : Parcelable {
         val exposure: Float = 0f,
         val shadows: Float = 0f,
         val highlights: Float = 0f,
+        val ambiance: Float = 0f,
+        val structure: Float = 0f,
         val sharpness: Float = 0f,
         val gamma: Float = 1f,
         val vignette: Float = 0f,
+        val blur: Float = 0f,
+        val fade: Float = 0f,
         val grain: Float = 0f
     ) : EditOperation
 
@@ -37,6 +41,7 @@ sealed interface EditOperation : Parcelable {
         val flipVertical: Boolean = false,
         val perspectiveHorizontal: Float = 0f,
         val perspectiveVertical: Float = 0f,
+        val expandRatio: Float = 0f,
         val scale: Float = 1.0f,
         val panXNorm: Float = 0f,
         val panYNorm: Float = 0f,

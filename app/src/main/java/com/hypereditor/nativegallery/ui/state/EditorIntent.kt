@@ -1,15 +1,16 @@
 package com.hypereditor.nativegallery.ui.state
 
+import android.graphics.Bitmap
 import android.net.Uri
 import com.hypereditor.nativegallery.domain.model.*
 
 enum class EditorSectionTab {
+    GEOMETRY_CROP,
     ADJUSTMENTS,
     FILTERS_PRESETS,
-    MASKS_SELECTIONS,
     CREATIVE_TOOLS,
     LAYERS,
-    GEOMETRY_CROP
+    MASKS_SELECTIONS
 }
 
 sealed interface EditorIntent {
@@ -27,7 +28,7 @@ sealed interface EditorIntent {
     data class ApplyUserPreset(val preset: UserPreset) : EditorIntent
     data class DeleteUserPreset(val presetId: String) : EditorIntent
 
-    // Creative & Retouch Tools (Brush, Eraser, Text, Clone Stamp)
+    // Creative & Retouch Tools (Brush, Eraser, Text, Clone Stamp / Healing)
     data class AddBrushStroke(val stroke: EditOperation.BrushDraw) : EditorIntent
     data object ClearBrushStrokes : EditorIntent
     data class AddTextOverlay(
@@ -68,12 +69,13 @@ sealed interface EditorIntent {
     data class ToggleLayerVisibility(val layerId: String) : EditorIntent
     data class UpdateLayerOpacity(val layerId: String, val opacity: Float) : EditorIntent
     data class UpdateLayerBlendMode(val layerId: String, val blendMode: LayerBlendMode) : EditorIntent
+    data class DuplicateLayer(val layerId: String) : EditorIntent
     data class MoveLayerUp(val layerId: String) : EditorIntent
     data class MoveLayerDown(val layerId: String) : EditorIntent
     data class DeleteLayer(val layerId: String) : EditorIntent
     data class SelectActiveLayer(val layerId: String?) : EditorIntent
 
-    // Geometry & Crop
+    // Geometry & Crop Pro
     data class UpdateCropTransform(val cropTransform: EditOperation.CropTransform) : EditorIntent
     data class SetCropAspectRatio(val aspectRatio: CropAspectRatio) : EditorIntent
     data class SetCropScaleMode(val scaleMode: CropScaleMode) : EditorIntent
@@ -92,5 +94,8 @@ sealed interface EditorIntent {
     data class SetCompareOriginalMode(val isComparing: Boolean) : EditorIntent
     data object Undo : EditorIntent
     data object Redo : EditorIntent
-    data object SaveAndExport : EditorIntent
+    data class SaveAndExport(
+        val format: Bitmap.CompressFormat = Bitmap.CompressFormat.JPEG,
+        val quality: Int = 95
+    ) : EditorIntent
 }

@@ -18,6 +18,42 @@ class GeometryTransformStage : RenderStage {
         val totalRotation = (crop.rotation90Degrees.toFloat() + crop.fineStraightenAngle) % 360f
         val hasRotation = Math.abs(totalRotation) > 0.01f
         val hasFlip = crop.flipHorizontal || crop.flipVertical
+
+        val hasNormCrop = crop.cropLeftNorm > 0.001f || crop.cropTopNorm > 0.001f ||
+                crop.cropRightNorm < 0.999f || crop.cropBottomNorm < 0.999f
+
+        // If user defined a Snapseed-style crop selection rectangle
+        if (hasNormCrop) {
+            // 1. First apply rotation/flip if any to the base image space
+            var baseImage = input
+            if (hasRotation || hasFlip) {
+                val matrix = Matrix()
+                if (hasFlip) {
+                    val scaleX = if (crop.flipHorizontal) -1f else 1f
+                    val scaleY = if (crop.flipVertical) -1f else 1f
+                    matrix.postScale(scaleX, scaleY, baseImage.width / 2f, baseImage.height / 2f)
+                }
+                if (hasRotation) {
+                    matrix.postRotate(totalRotation, baseImage.width / 2f, baseImage.height / 2f)
+                }
+                baseImage = Bitmap.createBitmap(
+                    baseImage, 0, 0, baseImage.width, baseImage.height, matrix, true
+                )
+            }
+
+            val baseW = baseImage.width
+            val baseH = baseImage.height
+
+            val cropL = (crop.cropLeftNorm * baseW).toInt().coerceIn(0, baseW - 2)
+            val cropT = (crop.cropTopNorm * baseH).toInt().coerceIn(0, baseH - 2)
+            val cropR = (crop.cropRightNorm * baseW).toInt().coerceIn(cropL + 2, baseW)
+            val cropB = (crop.cropBottomNorm * baseH).toInt().coerceIn(cropT + 2, baseH)
+            val cropW = (cropR - cropL).coerceAtLeast(1)
+            val cropH = (cropB - cropT).coerceAtLeast(1)
+
+            return Bitmap.createBitmap(baseImage, cropL, cropT, cropW, cropH)
+        }
+
         val hasProCrop = crop.aspectRatio != CropAspectRatio.ORIGINAL ||
                 crop.scale > 1.001f ||
                 Math.abs(crop.panXNorm) > 0.001f ||
@@ -78,18 +114,6 @@ class GeometryTransformStage : RenderStage {
 
         // Standard Crop / Rotation fallback
         var intermediate = input
-        val hasNormCrop = crop.cropLeftNorm > 0.001f || crop.cropTopNorm > 0.001f ||
-                crop.cropRightNorm < 0.999f || crop.cropBottomNorm < 0.999f
-
-        if (hasNormCrop) {
-            val cropL = (crop.cropLeftNorm * srcW).toInt().coerceIn(0, srcW - 2)
-            val cropT = (crop.cropTopNorm * srcH).toInt().coerceIn(0, srcH - 2)
-            val cropR = (crop.cropRightNorm * srcW).toInt().coerceIn(cropL + 2, srcW)
-            val cropB = (crop.cropBottomNorm * srcH).toInt().coerceIn(cropT + 2, srcH)
-            val cropW = (cropR - cropL).coerceAtLeast(1)
-            val cropH = (cropB - cropT).coerceAtLeast(1)
-            intermediate = Bitmap.createBitmap(intermediate, cropL, cropT, cropW, cropH)
-        }
 
         if (hasRotation || hasFlip) {
             val matrix = Matrix()

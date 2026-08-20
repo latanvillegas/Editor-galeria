@@ -43,7 +43,7 @@ object MediaStoreSaver {
             val itemUri = resolver.insert(collectionUri, contentValues)
                 ?: return@withContext Result.failure(Exception("No se pudo registrar en MediaStore"))
 
-            val outputStream: OutputStream? = resolver.openOutputStream(itemUri)
+            val outputStream: OutputStream = resolver.openOutputStream(itemUri)
                 ?: return@withContext Result.failure(Exception("No se pudo abrir OutputStream"))
 
             outputStream.use { stream ->

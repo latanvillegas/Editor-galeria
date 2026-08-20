@@ -3,7 +3,6 @@ package com.hypereditor.nativegallery.domain.model
 import android.graphics.Bitmap
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
-import kotlinx.parcelize.RawValue
 import java.util.UUID
 
 enum class LayerBlendMode {
@@ -33,5 +32,5 @@ data class LayerModel(
     val offsetY: Float = 0f,
     val scale: Float = 1.0f,
     val rotationDegrees: Float = 0f,
-    @RawValue val bitmap: Bitmap? = null
+    val bitmap: Bitmap? = null
 ) : Parcelable

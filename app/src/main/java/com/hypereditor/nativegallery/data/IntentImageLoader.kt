@@ -39,12 +39,13 @@ object IntentImageLoader {
         try {
             val contentResolver: ContentResolver = context.contentResolver
 
-            var inputStream: InputStream? = contentResolver.openInputStream(uri)
+            val firstStream = contentResolver.openInputStream(uri)
                 ?: return@withContext Result.failure(Exception("No se pudo abrir stream"))
 
             val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            BitmapFactory.decodeStream(inputStream, null, options)
-            inputStream.close()
+            firstStream.use { stream ->
+                BitmapFactory.decodeStream(stream, null, options)
+            }
 
             val origW = options.outWidth
             val origH = options.outHeight
@@ -59,13 +60,12 @@ object IntentImageLoader {
                 inMutable = true
             }
 
-            inputStream = contentResolver.openInputStream(uri)
-            var decodedBitmap = BitmapFactory.decodeStream(inputStream, null, decodeOptions)
-            inputStream?.close()
+            val secondStream = contentResolver.openInputStream(uri)
+                ?: return@withContext Result.failure(Exception("No se pudo abrir stream para decodificar"))
 
-            if (decodedBitmap == null) {
-                return@withContext Result.failure(Exception("Fallo al decodificar mapa de bits"))
-            }
+            var decodedBitmap: Bitmap = secondStream.use { stream ->
+                BitmapFactory.decodeStream(stream, null, decodeOptions)
+            } ?: return@withContext Result.failure(Exception("Fallo al decodificar mapa de bits"))
 
             contentResolver.openInputStream(uri)?.use { exifStream ->
                 val exif = ExifInterface(exifStream)
@@ -81,9 +81,12 @@ object IntentImageLoader {
                     ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
                     ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
                 }
-                decodedBitmap = Bitmap.createBitmap(
-                    decodedBitmap, 0, 0, decodedBitmap.width, decodedBitmap.height, matrix, true
-                )
+                if (!matrix.isIdentity) {
+                    val rotated = Bitmap.createBitmap(
+                        decodedBitmap, 0, 0, decodedBitmap.width, decodedBitmap.height, matrix, true
+                    )
+                    decodedBitmap = rotated
+                }
             }
 
             Result.success(decodedBitmap)

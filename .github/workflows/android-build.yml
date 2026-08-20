@@ -31,9 +31,6 @@ jobs:
         with:
           gradle-version: 8.10.2
 
-      - name: Grant Execute Permission to Gradle Wrapper
-        run: chmod +x ./gradlew
-
       - name: Assemble Debug APK
         run: gradle assembleDebug --no-daemon --stacktrace
 

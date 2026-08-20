@@ -50,7 +50,7 @@ fun CropInteractiveCanvas(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF090A0D))
+            .background(MaterialTheme.colorScheme.background)
             .onSizeChanged { containerSize = it },
         contentAlignment = Alignment.Center
     ) {
@@ -295,9 +295,9 @@ fun CropInteractiveCanvas(
             ) {
                 Surface(
                     shape = RoundedCornerShape(20.dp),
-                    color = Color(0xEE16181F),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
                     tonalElevation = 6.dp,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF262933))
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
@@ -309,7 +309,7 @@ fun CropInteractiveCanvas(
 
                         Text(
                             text = "Área: ${cropPercentW}% × ${cropPercentH}%",
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 12.sp
                         )
 
@@ -329,7 +329,7 @@ fun CropInteractiveCanvas(
                             Icon(
                                 imageVector = Icons.Default.RestartAlt,
                                 contentDescription = "Restablecer recorte",
-                                tint = Color.LightGray,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(16.dp)
                             )
                         }

@@ -78,7 +78,7 @@ fun HyperEditorScreen(
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("Cargando imagen desde galería...", color = Color.White, fontSize = 14.sp)
+                Text("Cargando imagen desde galería...", color = MaterialTheme.colorScheme.onBackground, fontSize = 14.sp)
             }
         }
         return
@@ -99,7 +99,7 @@ fun HyperEditorScreen(
                     modifier = Modifier.padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(text = "Error al abrir imagen", color = Color.White, fontSize = 18.sp)
+                    Text(text = "Error al abrir imagen", color = MaterialTheme.colorScheme.onSurface, fontSize = 18.sp)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(text = state.errorMessage, color = Color(0xFFFF6B6B), fontSize = 14.sp)
                     Spacer(modifier = Modifier.height(16.dp))
@@ -107,7 +107,7 @@ fun HyperEditorScreen(
                         onClick = onClose,
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                     ) {
-                        Text("Regresar a la Galería", color = Color.White)
+                        Text("Regresar a la Galería", color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
             }
@@ -119,10 +119,10 @@ fun HyperEditorScreen(
     if (showSavePresetDialog) {
         AlertDialog(
             onDismissRequest = { showSavePresetDialog = false },
-            title = { Text("Guardar como Preset", color = Color.White) },
+            title = { Text("Guardar como Preset", color = MaterialTheme.colorScheme.onSurface) },
             text = {
                 Column {
-                    Text("Guarda los ajustes y filtros actuales para reutilizarlos:", color = Color.LightGray, fontSize = 13.sp)
+                    Text("Guarda los ajustes y filtros actuales para reutilizarlos:", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                     Spacer(modifier = Modifier.height(12.dp))
                     OutlinedTextField(
                         value = newPresetName,
@@ -130,10 +130,10 @@ fun HyperEditorScreen(
                         placeholder = { Text("Nombre del Preset (ej. Mi Estilo)") },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                             focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
                         )
                     )
                 }
@@ -149,12 +149,12 @@ fun HyperEditorScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Text("Guardar", color = Color.Black)
+                    Text("Guardar", color = MaterialTheme.colorScheme.onPrimary)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showSavePresetDialog = false }) {
-                    Text("Cancelar", color = Color.LightGray)
+                    Text("Cancelar", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
             containerColor = MaterialTheme.colorScheme.surface
@@ -165,10 +165,10 @@ fun HyperEditorScreen(
     if (showAddTextLayerDialog) {
         AlertDialog(
             onDismissRequest = { showAddTextLayerDialog = false },
-            title = { Text("Nueva Capa de Texto", color = Color.White) },
+            title = { Text("Nueva Capa de Texto", color = MaterialTheme.colorScheme.onSurface) },
             text = {
                 Column {
-                    Text("Ingresa el texto que deseas superponer como capa independiente:", color = Color.LightGray, fontSize = 13.sp)
+                    Text("Ingresa el texto que deseas superponer como capa independiente:", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                     Spacer(modifier = Modifier.height(12.dp))
                     OutlinedTextField(
                         value = newTextLayerContent,
@@ -176,10 +176,10 @@ fun HyperEditorScreen(
                         placeholder = { Text("Escribe tu texto aquí") },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                             focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
                         )
                     )
                 }
@@ -195,12 +195,12 @@ fun HyperEditorScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Text("Agregar Capa", color = Color.Black)
+                    Text("Agregar Capa", color = MaterialTheme.colorScheme.onPrimary)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showAddTextLayerDialog = false }) {
-                    Text("Cancelar", color = Color.LightGray)
+                    Text("Cancelar", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
             containerColor = MaterialTheme.colorScheme.surface
@@ -212,10 +212,10 @@ fun HyperEditorScreen(
         val stickers = listOf("⭐", "🔥", "❤️", "🚀", "💡", "👑", "✨", "📸", "⚡", "🎉", "💎", "👍")
         AlertDialog(
             onDismissRequest = { showAddStickerDialog = false },
-            title = { Text("Seleccionar Sticker", color = Color.White) },
+            title = { Text("Seleccionar Sticker", color = MaterialTheme.colorScheme.onSurface) },
             text = {
                 Column {
-                    Text("Elige un sticker para agregar como capa:", color = Color.LightGray, fontSize = 13.sp)
+                    Text("Elige un sticker para agregar como capa:", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                     Spacer(modifier = Modifier.height(12.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -252,7 +252,7 @@ fun HyperEditorScreen(
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { showAddStickerDialog = false }) {
-                    Text("Cancelar", color = Color.LightGray)
+                    Text("Cancelar", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
             containerColor = MaterialTheme.colorScheme.surface
@@ -267,6 +267,7 @@ fun HyperEditorScreen(
         // TopBar / Header
         Surface(
             color = MaterialTheme.colorScheme.surface,
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
@@ -283,7 +284,7 @@ fun HyperEditorScreen(
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Cancelar y salir",
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                     Spacer(modifier = Modifier.width(8.dp))
@@ -294,7 +295,7 @@ fun HyperEditorScreen(
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("HyperEditor Pro", color = Color.White, fontSize = 17.sp)
+                    Text("HyperEditor Pro", color = MaterialTheme.colorScheme.onSurface, fontSize = 17.sp)
 
                     state.originalBitmap?.let { bmp ->
                         Spacer(modifier = Modifier.width(12.dp))
@@ -304,7 +305,7 @@ fun HyperEditorScreen(
                         ) {
                             Text(
                                 text = "${bmp.width} × ${bmp.height} px",
-                                color = Color.LightGray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 12.sp,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             )
@@ -324,7 +325,7 @@ fun HyperEditorScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Undo,
                             contentDescription = "Deshacer",
-                            tint = if (state.canUndo) Color.White else Color.DarkGray
+                            tint = if (state.canUndo) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                         )
                     }
 
@@ -336,7 +337,7 @@ fun HyperEditorScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Redo,
                             contentDescription = "Rehacer",
-                            tint = if (state.canRedo) Color.White else Color.DarkGray
+                            tint = if (state.canRedo) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                         )
                     }
 
@@ -346,7 +347,7 @@ fun HyperEditorScreen(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .background(if (state.isComparingOriginal) MaterialTheme.colorScheme.primary else Color(0xFF2B2F38))
+                            .background(if (state.isComparingOriginal) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
                             .pointerInput(Unit) {
                                 detectTapGestures(
                                     onPress = {
@@ -362,13 +363,13 @@ fun HyperEditorScreen(
                             Icon(
                                 imageVector = Icons.Default.Visibility,
                                 contentDescription = null,
-                                tint = if (state.isComparingOriginal) Color.Black else Color.White,
+                                tint = if (state.isComparingOriginal) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = if (state.isComparingOriginal) "ORIGINAL" else "Comparar",
-                                color = if (state.isComparingOriginal) Color.Black else Color.White,
+                                color = if (state.isComparingOriginal) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                                 fontSize = 12.sp
                             )
                         }
@@ -378,7 +379,7 @@ fun HyperEditorScreen(
                     if (viewportState.isModified) {
                         OutlinedButton(
                             onClick = { viewportState.reset() },
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Icon(
@@ -403,20 +404,20 @@ fun HyperEditorScreen(
                         if (state.isExporting) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
-                                color = Color.Black,
+                                color = MaterialTheme.colorScheme.onPrimary,
                                 strokeWidth = 2.dp
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Guardando...", color = Color.Black)
+                            Text("Guardando...", color = MaterialTheme.colorScheme.onPrimary)
                         } else {
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = null,
-                                tint = Color.Black,
+                                tint = MaterialTheme.colorScheme.onPrimary,
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Guardar", color = Color.Black)
+                            Text("Guardar", color = MaterialTheme.colorScheme.onPrimary)
                         }
                     }
                 }
@@ -538,7 +539,7 @@ fun HyperEditorScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(text = "Ajustes de Color", color = Color.White, fontSize = 15.sp)
+                                    Text(text = "Ajustes de Color", color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp)
                                     TextButton(
                                         onClick = {
                                             onIntent(EditorIntent.UpdateAdjustments(EditOperation.Adjustments()))
@@ -577,7 +578,7 @@ fun HyperEditorScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(text = "Filtros Predefinidos", color = Color.White, fontSize = 15.sp)
+                                    Text(text = "Filtros Predefinidos", color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp)
                                     if (activeFilter != null) {
                                         TextButton(
                                             onClick = { onIntent(EditorIntent.ClearFilter) },
@@ -601,6 +602,7 @@ fun HyperEditorScreen(
                                                 Surface(
                                                     shape = RoundedCornerShape(8.dp),
                                                     color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                                    border = if (!isSelected) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)) else null,
                                                     modifier = Modifier
                                                         .weight(1f)
                                                         .height(44.dp)
@@ -611,7 +613,7 @@ fun HyperEditorScreen(
                                                     Box(contentAlignment = Alignment.Center) {
                                                         Text(
                                                             text = item.name,
-                                                            color = if (isSelected) Color.Black else Color.White,
+                                                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                                                             fontSize = 12.sp
                                                         )
                                                     }
@@ -635,7 +637,7 @@ fun HyperEditorScreen(
                                     )
                                 }
 
-                                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
 
                                 // Sección de Presets del Usuario
                                 Row(
@@ -643,15 +645,15 @@ fun HyperEditorScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(text = "Presets Guardados", color = Color.White, fontSize = 15.sp)
+                                    Text(text = "Presets Guardados", color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp)
                                     Button(
                                         onClick = { showSavePresetDialog = true },
                                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                                     ) {
-                                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.Black)
+                                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onPrimary)
                                         Spacer(modifier = Modifier.width(4.dp))
-                                        Text("Guardar Preset", color = Color.Black, fontSize = 11.sp)
+                                        Text("Guardar Preset", color = MaterialTheme.colorScheme.onPrimary, fontSize = 11.sp)
                                     }
                                 }
 
@@ -660,6 +662,7 @@ fun HyperEditorScreen(
                                         Surface(
                                             shape = RoundedCornerShape(8.dp),
                                             color = MaterialTheme.colorScheme.surfaceVariant,
+                                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
                                             modifier = Modifier.fillMaxWidth()
                                         ) {
                                             Row(
@@ -670,10 +673,10 @@ fun HyperEditorScreen(
                                                 horizontalArrangement = Arrangement.SpaceBetween
                                             ) {
                                                 Column(modifier = Modifier.weight(1f)) {
-                                                    Text(text = preset.name, color = Color.White, fontSize = 13.sp)
+                                                    Text(text = preset.name, color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp)
                                                     Text(
                                                         text = if (preset.appliedFilter != null) "Filtro ${preset.appliedFilter.filterName} + Ajustes" else "Ajustes de Color",
-                                                        color = Color.LightGray,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                         fontSize = 11.sp
                                                     )
                                                 }
@@ -692,7 +695,7 @@ fun HyperEditorScreen(
                                                         Icon(
                                                             imageVector = Icons.Default.DeleteOutline,
                                                             contentDescription = "Borrar preset",
-                                                            tint = Color.Gray,
+                                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                                             modifier = Modifier.size(16.dp)
                                                         )
                                                     }
@@ -706,10 +709,10 @@ fun HyperEditorScreen(
                             EditorSectionTab.MASKS_SELECTIONS -> {
                                 val masks = state.document?.masks ?: emptyList()
 
-                                Text(text = "Máscaras y Ajustes Locales", color = Color.White, fontSize = 15.sp)
+                                Text(text = "Máscaras y Ajustes Locales", color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp)
 
                                 // Quick Add Mask Selection Tools
-                                Text(text = "Crear Selección:", color = Color.LightGray, fontSize = 12.sp)
+                                Text(text = "Crear Selección:", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -728,7 +731,7 @@ fun HyperEditorScreen(
                                     }
                                 }
 
-                                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
 
                                 if (masks.isEmpty()) {
                                     Box(
@@ -739,7 +742,7 @@ fun HyperEditorScreen(
                                     ) {
                                         Text(
                                             text = "No hay máscaras activas.\nCrea una selección (Rect, Óvalo, Lazo o Pincel)\npara aplicar ajustes localizados.",
-                                            color = Color.Gray,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             fontSize = 12.sp,
                                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                                         )
@@ -773,7 +776,7 @@ fun HyperEditorScreen(
 
                                 var stampRadius by remember { mutableFloatStateOf(45f) }
 
-                                Text(text = "Herramientas Creativas y Retoque", color = Color.White, fontSize = 15.sp)
+                                Text(text = "Herramientas Creativas y Retoque", color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp)
 
                                 // Selector de sub-herramienta
                                 Row(
@@ -791,7 +794,7 @@ fun HyperEditorScreen(
                                     }
                                 }
 
-                                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
 
                                 when (selectedCreativeTool) {
                                     0 -> {
@@ -801,13 +804,13 @@ fun HyperEditorScreen(
                                             horizontalArrangement = Arrangement.SpaceBetween,
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Text(text = "Modo:", color = Color.LightGray, fontSize = 12.sp)
+                                            Text(text = "Modo:", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                                 OutlinedButton(
                                                     onClick = { isEraserMode = false },
                                                     colors = ButtonDefaults.outlinedButtonColors(
                                                         containerColor = if (!isEraserMode) MaterialTheme.colorScheme.primary else Color.Transparent,
-                                                        contentColor = if (!isEraserMode) Color.Black else Color.White
+                                                        contentColor = if (!isEraserMode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                                                     ),
                                                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp)
                                                 ) {
@@ -817,7 +820,7 @@ fun HyperEditorScreen(
                                                     onClick = { isEraserMode = true },
                                                     colors = ButtonDefaults.outlinedButtonColors(
                                                         containerColor = if (isEraserMode) MaterialTheme.colorScheme.primary else Color.Transparent,
-                                                        contentColor = if (isEraserMode) Color.Black else Color.White
+                                                        contentColor = if (isEraserMode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                                                     ),
                                                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp)
                                                 ) {
@@ -827,7 +830,7 @@ fun HyperEditorScreen(
                                         }
 
                                         if (!isEraserMode) {
-                                            Text(text = "Color de trazo:", color = Color.LightGray, fontSize = 12.sp)
+                                            Text(text = "Color de trazo:", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                                             Row(
                                                 modifier = Modifier.fillMaxWidth(),
                                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -840,7 +843,7 @@ fun HyperEditorScreen(
                                                             .background(Color(cInt))
                                                             .border(
                                                                 width = if (brushColor == cInt) 2.dp else 1.dp,
-                                                                color = if (brushColor == cInt) MaterialTheme.colorScheme.primary else Color.Gray,
+                                                                color = if (brushColor == cInt) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
                                                                 shape = CircleShape
                                                             )
                                                             .clickable { brushColor = cInt }
@@ -878,9 +881,9 @@ fun HyperEditorScreen(
                                             modifier = Modifier.fillMaxWidth(),
                                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                                         ) {
-                                            Icon(if (isEraserMode) Icons.Default.Delete else Icons.Default.Draw, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
+                                            Icon(if (isEraserMode) Icons.Default.Delete else Icons.Default.Draw, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(16.dp))
                                             Spacer(modifier = Modifier.width(6.dp))
-                                            Text(if (isEraserMode) "Aplicar Borrador" else "Añadir Trazo Pincel", color = Color.Black, fontSize = 12.sp)
+                                            Text(if (isEraserMode) "Aplicar Borrador" else "Añadir Trazo Pincel", color = MaterialTheme.colorScheme.onPrimary, fontSize = 12.sp)
                                         }
 
                                         if ((state.document?.brushStrokes?.size ?: 0) > 0) {
@@ -895,17 +898,17 @@ fun HyperEditorScreen(
 
                                     1 -> {
                                         // Texto Tipográfico
-                                        Text(text = "Contenido del Texto:", color = Color.LightGray, fontSize = 12.sp)
+                                        Text(text = "Contenido del Texto:", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                                         OutlinedTextField(
                                             value = newTextContent,
                                             onValueChange = { newTextContent = it },
                                             singleLine = true,
                                             modifier = Modifier.fillMaxWidth(),
                                             colors = OutlinedTextFieldDefaults.colors(
-                                                focusedTextColor = Color.White,
-                                                unfocusedTextColor = Color.White,
+                                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                                unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant
+                                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
                                             )
                                         )
 
@@ -913,7 +916,7 @@ fun HyperEditorScreen(
                                             textSize = it
                                         }
 
-                                        Text(text = "Tipografía:", color = Color.LightGray, fontSize = 12.sp)
+                                        Text(text = "Tipografía:", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -923,7 +926,7 @@ fun HyperEditorScreen(
                                                     onClick = { textFont = font },
                                                     colors = ButtonDefaults.outlinedButtonColors(
                                                         containerColor = if (textFont == font) MaterialTheme.colorScheme.primary else Color.Transparent,
-                                                        contentColor = if (textFont == font) Color.Black else Color.White
+                                                        contentColor = if (textFont == font) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                                                     ),
                                                     contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
                                                     modifier = Modifier.weight(1f)
@@ -950,9 +953,9 @@ fun HyperEditorScreen(
                                             modifier = Modifier.fillMaxWidth(),
                                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                                         ) {
-                                            Icon(Icons.Default.Add, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
+                                            Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(16.dp))
                                             Spacer(modifier = Modifier.width(6.dp))
-                                            Text("Insertar Texto", color = Color.Black, fontSize = 12.sp)
+                                            Text("Insertar Texto", color = MaterialTheme.colorScheme.onPrimary, fontSize = 12.sp)
                                         }
 
                                         // Lista de textos añadidos
@@ -960,6 +963,7 @@ fun HyperEditorScreen(
                                             Surface(
                                                 shape = RoundedCornerShape(8.dp),
                                                 color = MaterialTheme.colorScheme.surfaceVariant,
+                                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
                                                 modifier = Modifier.fillMaxWidth()
                                             ) {
                                                 Row(
@@ -970,8 +974,8 @@ fun HyperEditorScreen(
                                                     horizontalArrangement = Arrangement.SpaceBetween
                                                 ) {
                                                     Column(modifier = Modifier.weight(1f)) {
-                                                        Text(text = txt.text, color = Color.White, fontSize = 13.sp)
-                                                        Text(text = "Fuente: ${txt.fontFamilyName} (${txt.textSize.toInt()}sp)", color = Color.LightGray, fontSize = 11.sp)
+                                                        Text(text = txt.text, color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp)
+                                                        Text(text = "Fuente: ${txt.fontFamilyName} (${txt.textSize.toInt()}sp)", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
                                                     }
                                                     IconButton(
                                                         onClick = { onIntent(EditorIntent.DeleteTextOverlay(txt.id)) },
@@ -988,12 +992,12 @@ fun HyperEditorScreen(
                                         // Clone Stamp (Tampón de Clonar)
                                         Text(
                                             text = "Tampón de Clonar:",
-                                            color = Color.White,
+                                            color = MaterialTheme.colorScheme.onSurface,
                                             fontSize = 14.sp
                                         )
                                         Text(
                                             text = "Muestrea un área de origen y la estampa en el destino con bordes suavizados.",
-                                            color = Color.LightGray,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             fontSize = 11.sp
                                         )
 
@@ -1013,9 +1017,9 @@ fun HyperEditorScreen(
                                             modifier = Modifier.fillMaxWidth(),
                                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                                         ) {
-                                            Icon(Icons.Default.ContentPaste, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
+                                            Icon(Icons.Default.ContentPaste, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(16.dp))
                                             Spacer(modifier = Modifier.width(6.dp))
-                                            Text("Aplicar Parche Clonado", color = Color.Black, fontSize = 12.sp)
+                                            Text("Aplicar Parche Clonado", color = MaterialTheme.colorScheme.onPrimary, fontSize = 12.sp)
                                         }
 
                                         if ((state.document?.cloneStamps?.size ?: 0) > 0) {
@@ -1033,7 +1037,7 @@ fun HyperEditorScreen(
                             EditorSectionTab.LAYERS -> {
                                 val layers = state.document?.layers ?: emptyList()
 
-                                Text(text = "Gestor de Capas", color = Color.White, fontSize = 15.sp)
+                                Text(text = "Gestor de Capas", color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp)
 
                                 // Quick Add Layer Actions (Tinte, Duplicar, Texto, Sticker)
                                 Row(
@@ -1055,7 +1059,7 @@ fun HyperEditorScreen(
                                         contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
                                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                                     ) {
-                                        Text("+ Tinte", color = Color.Black, fontSize = 11.sp)
+                                        Text("+ Tinte", color = MaterialTheme.colorScheme.onPrimary, fontSize = 11.sp)
                                     }
 
                                     Button(
@@ -1072,7 +1076,7 @@ fun HyperEditorScreen(
                                         contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
                                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                                     ) {
-                                        Text("+ Duplicar", color = Color.White, fontSize = 11.sp)
+                                        Text("+ Duplicar", color = MaterialTheme.colorScheme.onSurface, fontSize = 11.sp)
                                     }
 
                                     Button(
@@ -1081,7 +1085,7 @@ fun HyperEditorScreen(
                                         contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
                                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                                     ) {
-                                        Text("+ Texto", color = Color.White, fontSize = 11.sp)
+                                        Text("+ Texto", color = MaterialTheme.colorScheme.onSurface, fontSize = 11.sp)
                                     }
 
                                     Button(
@@ -1090,11 +1094,11 @@ fun HyperEditorScreen(
                                         contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
                                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                                     ) {
-                                        Text("+ Sticker", color = Color.White, fontSize = 11.sp)
+                                        Text("+ Sticker", color = MaterialTheme.colorScheme.onSurface, fontSize = 11.sp)
                                     }
                                 }
 
-                                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
 
                                 if (layers.isEmpty()) {
                                     Box(
@@ -1105,7 +1109,7 @@ fun HyperEditorScreen(
                                     ) {
                                         Text(
                                             text = "No hay capas adicionales.\nAgrega un tinte, duplica la imagen, o añade textos/stickers.",
-                                            color = Color.Gray,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             fontSize = 12.sp,
                                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                                         )
@@ -1142,7 +1146,7 @@ fun HyperEditorScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(text = "Recorte y Encuadre Snapseed", color = Color.White, fontSize = 15.sp)
+                                    Text(text = "Recorte y Encuadre Snapseed", color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp)
                                     TextButton(
                                         onClick = {
                                             cropUiState.reset()
@@ -1156,7 +1160,8 @@ fun HyperEditorScreen(
 
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
-                                    color = Color(0xFF1B202A),
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Row(
@@ -1167,7 +1172,7 @@ fun HyperEditorScreen(
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
                                             text = "Arrastra la imagen para reubicarla, pellizca para zoom. Doble toque para centrar/ajustar.",
-                                            color = Color.LightGray,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             fontSize = 11.sp
                                         )
                                     }
@@ -1192,7 +1197,7 @@ fun HyperEditorScreen(
                                     }
                                 }
 
-                                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
 
                                 // Botones de Rotación 90° y Flips
                                 Row(
@@ -1233,7 +1238,7 @@ fun HyperEditorScreen(
                                     }
                                 }
 
-                                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
 
                                 // Slider de Enderezado Fino (Straighten con Snapping a 0°)
                                 AdjustmentSlider(
@@ -1250,7 +1255,7 @@ fun HyperEditorScreen(
                                     }
                                 )
 
-                                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
 
                                 // Regla de Tercios Toggle & Reset
                                 Row(
@@ -1258,7 +1263,7 @@ fun HyperEditorScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(text = "Guías de composición (3×3)", color = Color.LightGray, fontSize = 13.sp)
+                                    Text(text = "Guías de composición (3×3)", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                                     Switch(
                                         checked = cropUiState.showRuleOfThirds,
                                         onCheckedChange = {
@@ -1268,7 +1273,7 @@ fun HyperEditorScreen(
                                     )
                                 }
 
-                                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
 
                                 // Presets de Relación de Aspecto
                                 Row(
@@ -1278,7 +1283,7 @@ fun HyperEditorScreen(
                                 ) {
                                     Text(
                                         text = "Proporción de Recorte",
-                                        color = Color.White,
+                                        color = MaterialTheme.colorScheme.onSurface,
                                         fontSize = 14.sp
                                     )
                                     TextButton(
@@ -1365,6 +1370,7 @@ private fun CreativeTabChip(
     Surface(
         shape = RoundedCornerShape(8.dp),
         color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+        border = if (!isSelected) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)) else null,
         modifier = modifier
             .height(38.dp)
             .clickable(onClick = onClick)
@@ -1378,12 +1384,12 @@ private fun CreativeTabChip(
                 imageVector = icon,
                 contentDescription = label,
                 modifier = Modifier.size(14.dp),
-                tint = if (isSelected) Color.Black else Color.White
+                tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(
                 text = label,
-                color = if (isSelected) Color.Black else Color.White,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                 fontSize = 11.sp
             )
         }
@@ -1400,6 +1406,7 @@ private fun MaskToolChip(
     Surface(
         shape = RoundedCornerShape(8.dp),
         color = MaterialTheme.colorScheme.surfaceVariant,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
         modifier = modifier
             .height(38.dp)
             .clickable(onClick = onClick)
@@ -1411,7 +1418,7 @@ private fun MaskToolChip(
         ) {
             Icon(imageVector = icon, contentDescription = label, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.width(4.dp))
-            Text(text = label, color = Color.White, fontSize = 11.sp)
+            Text(text = label, color = MaterialTheme.colorScheme.onSurface, fontSize = 11.sp)
         }
     }
 }
@@ -1430,6 +1437,7 @@ private fun MaskCard(
     Surface(
         shape = RoundedCornerShape(10.dp),
         color = MaterialTheme.colorScheme.surfaceVariant,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -1449,12 +1457,12 @@ private fun MaskCard(
                         Icon(
                             imageVector = if (mask.isEnabled) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
                             contentDescription = "Activar",
-                            tint = if (mask.isEnabled) MaterialTheme.colorScheme.primary else Color.Gray,
+                            tint = if (mask.isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(18.dp)
                         )
                     }
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = mask.name, color = Color.White, fontSize = 13.sp)
+                    Text(text = mask.name, color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp)
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1463,7 +1471,7 @@ private fun MaskCard(
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
                             containerColor = if (mask.isInverted) MaterialTheme.colorScheme.primary else Color.Transparent,
-                            contentColor = if (mask.isInverted) Color.Black else Color.White
+                            contentColor = if (mask.isInverted) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                         )
                     ) {
                         Text("Invertir", fontSize = 10.sp)
@@ -1488,10 +1496,10 @@ private fun MaskCard(
                 max = 40f,
                 defaultValue = 0f,
                 unitSuffix = "px",
-                onValueChange = onFeatherChange
+                onFeatherChange = onFeatherChange
             )
 
-            HorizontalDivider(color = Color(0xFF1E2128))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
 
             // Ajustes Locales de la Máscara
             Text(text = "Ajustes en el área enmascarada:", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
@@ -1538,6 +1546,7 @@ private fun LayerCard(
     Surface(
         shape = RoundedCornerShape(10.dp),
         color = MaterialTheme.colorScheme.surfaceVariant,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -1556,7 +1565,7 @@ private fun LayerCard(
                         Icon(
                             imageVector = if (layer.isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                             contentDescription = "Visibilidad",
-                            tint = if (layer.isVisible) MaterialTheme.colorScheme.primary else Color.Gray,
+                            tint = if (layer.isVisible) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -1564,7 +1573,7 @@ private fun LayerCard(
                     Column {
                         Text(
                             text = layer.name,
-                            color = if (layer.isVisible) Color.White else Color.Gray,
+                            color = if (layer.isVisible) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 13.sp
                         )
                         Surface(
@@ -1590,7 +1599,7 @@ private fun LayerCard(
                         Icon(
                             imageVector = Icons.Default.ArrowUpward,
                             contentDescription = "Mover arriba",
-                            tint = if (!isTop) Color.White else Color.DarkGray,
+                            tint = if (!isTop) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -1603,7 +1612,7 @@ private fun LayerCard(
                         Icon(
                             imageVector = Icons.Default.ArrowDownward,
                             contentDescription = "Mover abajo",
-                            tint = if (!isBottom) Color.White else Color.DarkGray,
+                            tint = if (!isBottom) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -1627,19 +1636,20 @@ private fun LayerCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "Fusión:", color = Color.LightGray, fontSize = 12.sp)
+                Text(text = "Fusión:", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
 
                 Box {
                     Surface(
                         shape = RoundedCornerShape(6.dp),
-                        color = Color(0xFF1E2128),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
                         modifier = Modifier
                             .clickable { expandedBlendMenu = true }
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(text = layer.blendMode.name, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
-                            Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.LightGray, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
                         }
                     }
 
@@ -1650,7 +1660,7 @@ private fun LayerCard(
                     ) {
                         LayerBlendMode.entries.forEach { mode ->
                             DropdownMenuItem(
-                                text = { Text(mode.name, color = if (layer.blendMode == mode) MaterialTheme.colorScheme.primary else Color.White, fontSize = 12.sp) },
+                                text = { Text(mode.name, color = if (layer.blendMode == mode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface, fontSize = 12.sp) },
                                 onClick = {
                                     onBlendModeChange(mode)
                                     expandedBlendMenu = false
@@ -1669,8 +1679,8 @@ private fun LayerCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "Opacidad", color = Color.LightGray, fontSize = 12.sp)
-                Text(text = "${(layer.opacity * 100).toInt()}%", color = Color.LightGray, fontSize = 11.sp)
+                Text(text = "Opacidad", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                Text(text = "${(layer.opacity * 100).toInt()}%", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
             }
 
             Slider(
@@ -1680,13 +1690,13 @@ private fun LayerCard(
                 colors = SliderDefaults.colors(
                     thumbColor = MaterialTheme.colorScheme.primary,
                     activeTrackColor = MaterialTheme.colorScheme.primary,
-                    inactiveTrackColor = Color(0xFF1E2128)
+                    inactiveTrackColor = MaterialTheme.colorScheme.surface
                 )
             )
 
             // Layer Transform Controls (For Text, Sticker, Duplicate Image)
             if (layer.layerType == LayerType.TEXT || layer.layerType == LayerType.STICKER || layer.layerType == LayerType.IMAGE_DUPLICATE) {
-                HorizontalDivider(color = Color(0xFF1E2128), modifier = Modifier.padding(vertical = 4.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), modifier = Modifier.padding(vertical = 4.dp))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1741,7 +1751,7 @@ private fun ActionButton(
         contentPadding = PaddingValues(horizontal = 6.dp, vertical = 8.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = if (isActive) Color.Black else Color.White
+            contentColor = if (isActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
         )
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -1762,7 +1772,10 @@ private fun RatioChip(
         onClick = onClick,
         modifier = modifier,
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
-        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
     ) {
         Text(text = label, fontSize = 12.sp)
     }
@@ -1788,7 +1801,7 @@ private fun AdjustmentSlider(
         ) {
             Text(
                 text = label,
-                color = if (isModified) Color.White else Color.LightGray,
+                color = if (isModified) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 13.sp
             )
             val formatted = if (unitSuffix == "%") {
@@ -1798,7 +1811,7 @@ private fun AdjustmentSlider(
             }
             Text(
                 text = formatted,
-                color = if (isModified) MaterialTheme.colorScheme.primary else Color.Gray,
+                color = if (isModified) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 fontSize = 12.sp
             )
         }
@@ -1808,7 +1821,7 @@ private fun AdjustmentSlider(
             onValueChange = onValueChange,
             valueRange = min..max,
             colors = SliderDefaults.colors(
-                thumbColor = if (isModified) MaterialTheme.colorScheme.primary else Color.LightGray,
+                thumbColor = if (isModified) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 activeTrackColor = MaterialTheme.colorScheme.primary,
                 inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
             )

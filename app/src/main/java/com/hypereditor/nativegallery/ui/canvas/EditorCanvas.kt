@@ -29,7 +29,7 @@ fun EditorCanvas(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF0C0D10))
+            .background(MaterialTheme.colorScheme.background)
             .editorCanvasGestures(viewportState),
         contentAlignment = Alignment.Center
     ) {
@@ -58,7 +58,8 @@ fun EditorCanvas(
         ) {
             Surface(
                 shape = RoundedCornerShape(20.dp),
-                color = Color(0xCC1E2026),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
                 tonalElevation = 4.dp
             ) {
                 Row(
@@ -68,7 +69,7 @@ fun EditorCanvas(
                 ) {
                     Text(
                         text = "${viewportState.zoomPercentage}%",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 12.sp
                     )
 

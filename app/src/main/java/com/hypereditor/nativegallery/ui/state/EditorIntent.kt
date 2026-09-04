@@ -18,7 +18,11 @@ sealed interface EditorIntent {
     data class SelectTab(val tab: EditorSectionTab) : EditorIntent
 
     // Adjustments
-    data class UpdateAdjustments(val adjustments: EditOperation.Adjustments) : EditorIntent
+    data class UpdateAdjustments(
+        val adjustments: EditOperation.Adjustments,
+        val isFinished: Boolean = true,
+        val actionLabel: String = "Ajustes de color"
+    ) : EditorIntent
 
     // Filters & Presets
     data class ApplyFilter(val name: String, val intensity: Float = 1.0f) : EditorIntent
@@ -84,7 +88,9 @@ sealed interface EditorIntent {
     data object Rotate90CounterClockwise : EditorIntent
     data object ToggleFlipHorizontal : EditorIntent
     data object ToggleFlipVertical : EditorIntent
-    data class UpdateStraightenAngle(val angle: Float) : EditorIntent
+    data class UpdateStraightenAngle(val angle: Float, val isFinished: Boolean = true) : EditorIntent
+    data object BeginCropInteraction : EditorIntent
+    data class CommitCropTransform(val actionLabel: String = "Recorte y encuadre") : EditorIntent
     data class ApplyCropNorm(val left: Float, val top: Float, val right: Float, val bottom: Float) : EditorIntent
     data class ApplyAspectRatioCrop(val ratioW: Float, val ratioH: Float) : EditorIntent
     data object ResetCrop : EditorIntent

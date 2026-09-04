@@ -5,6 +5,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -62,11 +64,19 @@ fun HyperEditorScreen(
 ) {
     val viewportState = rememberCanvasViewportState()
     val cropUiState = rememberCropUiState(state.document?.cropTransform ?: EditOperation.CropTransform())
+    var showHistoryDialog by remember { mutableStateOf(false) }
     var showSavePresetDialog by remember { mutableStateOf(false) }
     var newPresetName by remember { mutableStateOf("") }
     var showAddTextLayerDialog by remember { mutableStateOf(false) }
     var newTextLayerContent by remember { mutableStateOf("Texto de Capa") }
     var showAddStickerDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(state.document?.cropTransform) {
+        val currentTransform = state.document?.cropTransform ?: return@LaunchedEffect
+        if (!cropUiState.isInteracting) {
+            cropUiState.syncFrom(currentTransform, 0f, 0f)
+        }
+    }
 
     if (state.isLoading) {
         Box(
@@ -259,6 +269,117 @@ fun HyperEditorScreen(
         )
     }
 
+    // Dialog para Historial Completo de Operaciones (Undo / Redo Real)
+    if (showHistoryDialog) {
+        AlertDialog(
+            onDismissRequest = { showHistoryDialog = false },
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.History,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Text("Historial de Operaciones", color = MaterialTheme.colorScheme.onSurface)
+                }
+            },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Pila cronológica de ediciones aplicadas. Cada paso registra exactamente la operación realizada:",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 13.sp
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 280.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        itemsIndexed(state.historyList) { index, item ->
+                            val isLatest = index == state.historyList.lastIndex
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isLatest) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant,
+                                border = if (isLatest) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            text = "#$index",
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontSize = 12.sp,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = item,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            fontSize = 13.sp
+                                        )
+                                    }
+                                    if (isLatest) {
+                                        Surface(
+                                            shape = RoundedCornerShape(4.dp),
+                                            color = MaterialTheme.colorScheme.primary
+                                        ) {
+                                            Text(
+                                                text = "ACTUAL",
+                                                color = MaterialTheme.colorScheme.onPrimary,
+                                                fontSize = 10.sp,
+                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = { onIntent(EditorIntent.Undo) },
+                        enabled = state.canUndo
+                    ) {
+                        Icon(imageVector = Icons.AutoMirrored.Filled.Undo, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(state.undoActionName?.let { "Deshacer: $it" } ?: "Deshacer")
+                    }
+                    Button(
+                        onClick = { onIntent(EditorIntent.Redo) },
+                        enabled = state.canRedo
+                    ) {
+                        Icon(imageVector = Icons.AutoMirrored.Filled.Redo, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(state.redoActionName?.let { "Rehacer: $it" } ?: "Rehacer")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showHistoryDialog = false }) {
+                    Text("Cerrar", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -315,7 +436,7 @@ fun HyperEditorScreen(
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     // Undo
                     IconButton(
@@ -324,7 +445,7 @@ fun HyperEditorScreen(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Undo,
-                            contentDescription = "Deshacer",
+                            contentDescription = state.undoActionName?.let { "Deshacer: $it" } ?: "Deshacer",
                             tint = if (state.canUndo) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                         )
                     }
@@ -336,9 +457,30 @@ fun HyperEditorScreen(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Redo,
-                            contentDescription = "Rehacer",
+                            contentDescription = state.redoActionName?.let { "Rehacer: $it" } ?: "Rehacer",
                             tint = if (state.canRedo) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                         )
+                    }
+
+                    // Botón para desplegar Historial de Operaciones
+                    IconButton(
+                        onClick = { showHistoryDialog = true }
+                    ) {
+                        BadgedBox(
+                            badge = {
+                                if (state.historyList.size > 1) {
+                                    Badge(containerColor = MaterialTheme.colorScheme.primary) {
+                                        Text("${state.historyList.size - 1}", fontSize = 10.sp)
+                                    }
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.History,
+                                contentDescription = "Historial de Operaciones",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.width(4.dp))
@@ -442,6 +584,8 @@ fun HyperEditorScreen(
                     bitmap = state.originalBitmap,
                     cropState = cropUiState,
                     onCropTransformChanged = { onIntent(EditorIntent.UpdateCropTransform(it)) },
+                    onInteractionStart = { onIntent(EditorIntent.BeginCropInteraction) },
+                    onInteractionEnd = { onIntent(EditorIntent.CommitCropTransform("Recorte interactivo")) },
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
@@ -542,7 +686,7 @@ fun HyperEditorScreen(
                                     Text(text = "Ajustes de Color", color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp)
                                     TextButton(
                                         onClick = {
-                                            onIntent(EditorIntent.UpdateAdjustments(EditOperation.Adjustments()))
+                                            onIntent(EditorIntent.UpdateAdjustments(EditOperation.Adjustments(), isFinished = true, actionLabel = "Restablecer ajustes"))
                                         },
                                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                                     ) {
@@ -550,23 +694,82 @@ fun HyperEditorScreen(
                                     }
                                 }
 
-                                AdjustmentSlider("Brillo", adj.brightness, -1.0f, 1.0f, 0.0f) {
-                                    onIntent(EditorIntent.UpdateAdjustments(adj.copy(brightness = it)))
+                                AdjustmentSlider(
+                                    label = "Brillo",
+                                    value = adj.brightness,
+                                    min = -1.0f,
+                                    max = 1.0f,
+                                    defaultValue = 0.0f,
+                                    onValueChangeFinished = {
+                                        onIntent(EditorIntent.UpdateAdjustments(adj, isFinished = true, actionLabel = "Ajuste de brillo"))
+                                    }
+                                ) {
+                                    onIntent(EditorIntent.UpdateAdjustments(adj.copy(brightness = it), isFinished = false))
                                 }
-                                AdjustmentSlider("Contraste", adj.contrast, 0.0f, 2.0f, 1.0f) {
-                                    onIntent(EditorIntent.UpdateAdjustments(adj.copy(contrast = it)))
+
+                                AdjustmentSlider(
+                                    label = "Contraste",
+                                    value = adj.contrast,
+                                    min = 0.0f,
+                                    max = 2.0f,
+                                    defaultValue = 1.0f,
+                                    onValueChangeFinished = {
+                                        onIntent(EditorIntent.UpdateAdjustments(adj, isFinished = true, actionLabel = "Ajuste de contraste"))
+                                    }
+                                ) {
+                                    onIntent(EditorIntent.UpdateAdjustments(adj.copy(contrast = it), isFinished = false))
                                 }
-                                AdjustmentSlider("Saturación", adj.saturation, 0.0f, 2.0f, 1.0f) {
-                                    onIntent(EditorIntent.UpdateAdjustments(adj.copy(saturation = it)))
+
+                                AdjustmentSlider(
+                                    label = "Saturación",
+                                    value = adj.saturation,
+                                    min = 0.0f,
+                                    max = 2.0f,
+                                    defaultValue = 1.0f,
+                                    onValueChangeFinished = {
+                                        onIntent(EditorIntent.UpdateAdjustments(adj, isFinished = true, actionLabel = "Ajuste de saturación"))
+                                    }
+                                ) {
+                                    onIntent(EditorIntent.UpdateAdjustments(adj.copy(saturation = it), isFinished = false))
                                 }
-                                AdjustmentSlider("Exposición", adj.exposure, -2.0f, 2.0f, 0.0f) {
-                                    onIntent(EditorIntent.UpdateAdjustments(adj.copy(exposure = it)))
+
+                                AdjustmentSlider(
+                                    label = "Exposición",
+                                    value = adj.exposure,
+                                    min = -2.0f,
+                                    max = 2.0f,
+                                    defaultValue = 0.0f,
+                                    onValueChangeFinished = {
+                                        onIntent(EditorIntent.UpdateAdjustments(adj, isFinished = true, actionLabel = "Ajuste de exposición"))
+                                    }
+                                ) {
+                                    onIntent(EditorIntent.UpdateAdjustments(adj.copy(exposure = it), isFinished = false))
                                 }
-                                AdjustmentSlider("Temperatura", adj.temperature, -1.0f, 1.0f, 0.0f) {
-                                    onIntent(EditorIntent.UpdateAdjustments(adj.copy(temperature = it)))
+
+                                AdjustmentSlider(
+                                    label = "Temperatura",
+                                    value = adj.temperature,
+                                    min = -1.0f,
+                                    max = 1.0f,
+                                    defaultValue = 0.0f,
+                                    onValueChangeFinished = {
+                                        onIntent(EditorIntent.UpdateAdjustments(adj, isFinished = true, actionLabel = "Ajuste de temperatura"))
+                                    }
+                                ) {
+                                    onIntent(EditorIntent.UpdateAdjustments(adj.copy(temperature = it), isFinished = false))
                                 }
-                                AdjustmentSlider("Tinte", adj.tint, -1.0f, 1.0f, 0.0f) {
-                                    onIntent(EditorIntent.UpdateAdjustments(adj.copy(tint = it)))
+
+                                AdjustmentSlider(
+                                    label = "Tinte",
+                                    value = adj.tint,
+                                    min = -1.0f,
+                                    max = 1.0f,
+                                    defaultValue = 0.0f,
+                                    onValueChangeFinished = {
+                                        onIntent(EditorIntent.UpdateAdjustments(adj, isFinished = true, actionLabel = "Ajuste de tinte"))
+                                    }
+                                ) {
+                                    onIntent(EditorIntent.UpdateAdjustments(adj.copy(tint = it), isFinished = false))
                                 }
                             }
 
@@ -1248,10 +1451,13 @@ fun HyperEditorScreen(
                                     max = 45.0f,
                                     defaultValue = 0.0f,
                                     unitSuffix = "°",
+                                    onValueChangeFinished = {
+                                        onIntent(EditorIntent.UpdateStraightenAngle(crop.fineStraightenAngle, isFinished = true))
+                                    },
                                     onValueChange = {
                                         val angleWithSnap = if (Math.abs(it) < 0.8f) 0f else it
                                         cropUiState.applyStraighten(angleWithSnap)
-                                        onIntent(EditorIntent.UpdateStraightenAngle(angleWithSnap))
+                                        onIntent(EditorIntent.UpdateStraightenAngle(angleWithSnap, isFinished = false))
                                     }
                                 )
 
@@ -1789,6 +1995,7 @@ private fun AdjustmentSlider(
     max: Float,
     defaultValue: Float,
     unitSuffix: String = "",
+    onValueChangeFinished: (() -> Unit)? = null,
     onValueChange: (Float) -> Unit
 ) {
     val isModified = kotlin.math.abs(value - defaultValue) > 0.01f
@@ -1819,6 +2026,7 @@ private fun AdjustmentSlider(
         Slider(
             value = value,
             onValueChange = onValueChange,
+            onValueChangeFinished = onValueChangeFinished,
             valueRange = min..max,
             colors = SliderDefaults.colors(
                 thumbColor = if (isModified) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,

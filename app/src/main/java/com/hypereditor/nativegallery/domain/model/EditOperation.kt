@@ -9,7 +9,7 @@ sealed interface EditOperation : Parcelable {
 
     @Parcelize
     data class Adjustments(
-        val id: String = UUID.randomUUID().toString(),
+        val id: String = "adjustments",
         val brightness: Float = 0f,
         val contrast: Float = 1f,
         val saturation: Float = 1f,
@@ -30,7 +30,7 @@ sealed interface EditOperation : Parcelable {
 
     @Parcelize
     data class CropTransform(
-        val id: String = UUID.randomUUID().toString(),
+        val id: String = "crop_transform",
         val cropLeftNorm: Float = 0f,
         val cropTopNorm: Float = 0f,
         val cropRightNorm: Float = 1f,
@@ -52,7 +52,7 @@ sealed interface EditOperation : Parcelable {
 
     @Parcelize
     data class ColorFilter(
-        val id: String = UUID.randomUUID().toString(),
+        val id: String = "color_filter",
         val filterName: String,
         val intensity: Float = 1.0f
     ) : EditOperation

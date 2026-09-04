@@ -40,6 +40,8 @@ fun CropInteractiveCanvas(
     bitmap: Bitmap?,
     cropState: CropUiState,
     onCropTransformChanged: (EditOperation.CropTransform) -> Unit,
+    onInteractionStart: (() -> Unit)? = null,
+    onInteractionEnd: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
@@ -129,8 +131,10 @@ fun CropInteractiveCanvas(
                     .pointerInput(cropState.aspectRatio, displayW, displayH, imgScreenLeft, imgScreenTop) {
                         detectTapGestures(
                             onDoubleTap = {
+                                onInteractionStart?.invoke()
                                 cropState.onDoubleTap()
                                 onCropTransformChanged(cropState.toCropTransform(displayW, displayH))
+                                onInteractionEnd?.invoke()
                             }
                         )
                     }
@@ -138,6 +142,7 @@ fun CropInteractiveCanvas(
                         val touchRadius = 36.dp.toPx()
                         detectDragGestures(
                             onDragStart = { startOffset ->
+                                onInteractionStart?.invoke()
                                 val cropL = imgScreenLeft + cropState.cropLeftNorm * displayW
                                 val cropT = imgScreenTop + cropState.cropTopNorm * displayH
                                 val cropR = imgScreenLeft + cropState.cropRightNorm * displayW
@@ -170,9 +175,11 @@ fun CropInteractiveCanvas(
                             },
                             onDragEnd = {
                                 activeHandle = -1
+                                onInteractionEnd?.invoke()
                             },
                             onDragCancel = {
                                 activeHandle = -1
+                                onInteractionEnd?.invoke()
                             },
                             onDrag = { _, dragAmount ->
                                 if (activeHandle == -1) return@detectDragGestures

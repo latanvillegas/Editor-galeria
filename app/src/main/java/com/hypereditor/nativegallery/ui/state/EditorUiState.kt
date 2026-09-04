@@ -18,6 +18,9 @@ data class EditorUiState(
     val isComparingOriginal: Boolean = false,
     val canUndo: Boolean = false,
     val canRedo: Boolean = false,
+    val undoActionName: String? = null,
+    val redoActionName: String? = null,
+    val historyList: List<String> = emptyList(),
     val isExporting: Boolean = false,
     val exportedUri: Uri? = null
 )

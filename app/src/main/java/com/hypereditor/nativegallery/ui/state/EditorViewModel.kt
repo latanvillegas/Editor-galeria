@@ -23,6 +23,9 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     private val renderPipeline = RenderPipeline(Dispatchers.Default)
     private val exportManager = ExportManager(application, renderPipeline)
     private val historyManager = HistoryManager(maxStackSize = 50)
+    private var isInteractingCrop: Boolean = false
+    private var dragStartDocument: EditorDocument? = null
+    private var currentActionDescription: String = "Imagen original"
 
     private var renderJob: Job? = null
 
@@ -68,17 +71,21 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             is EditorIntent.SelectTab -> _uiState.update { it.copy(selectedTab = intent.tab) }
 
             // Color Adjustments
-            is EditorIntent.UpdateAdjustments -> mutateDocument { it.copy(adjustments = intent.adjustments) }
+            is EditorIntent.UpdateAdjustments -> handleUpdateAdjustments(
+                adjustments = intent.adjustments,
+                isFinished = intent.isFinished,
+                actionLabel = intent.actionLabel
+            )
 
             // Preset Filters
-            is EditorIntent.ApplyFilter -> mutateDocument { doc ->
+            is EditorIntent.ApplyFilter -> mutateDocument("Filtro ${intent.name}") { doc ->
                 doc.copy(appliedFilter = EditOperation.ColorFilter(filterName = intent.name, intensity = intent.intensity))
             }
-            is EditorIntent.UpdateFilterIntensity -> mutateDocument { doc ->
+            is EditorIntent.UpdateFilterIntensity -> mutateDocument("Intensidad de filtro") { doc ->
                 val currentFilter = doc.appliedFilter ?: EditOperation.ColorFilter(filterName = "BW", intensity = intent.intensity)
                 doc.copy(appliedFilter = currentFilter.copy(intensity = intent.intensity))
             }
-            is EditorIntent.ClearFilter -> mutateDocument { doc ->
+            is EditorIntent.ClearFilter -> mutateDocument("Quitar filtro") { doc ->
                 doc.copy(appliedFilter = null)
             }
 
@@ -92,13 +99,13 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             }
 
             // Creative Tools (Brush, Eraser, Text, Clone Stamp)
-            is EditorIntent.AddBrushStroke -> mutateDocument { doc ->
+            is EditorIntent.AddBrushStroke -> mutateDocument(if (intent.stroke.isEraser) "Borrador de pincel" else "Trazo de pincel") { doc ->
                 doc.copy(brushStrokes = doc.brushStrokes + intent.stroke)
             }
-            is EditorIntent.ClearBrushStrokes -> mutateDocument { doc ->
+            is EditorIntent.ClearBrushStrokes -> mutateDocument("Limpiar trazos") { doc ->
                 doc.copy(brushStrokes = emptyList())
             }
-            is EditorIntent.AddTextOverlay -> mutateDocument { doc ->
+            is EditorIntent.AddTextOverlay -> mutateDocument("Agregar texto") { doc ->
                 val newText = EditOperation.TextOverlay(
                     text = intent.text,
                     posX = intent.posX,
@@ -111,15 +118,15 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                 )
                 doc.copy(textOverlays = doc.textOverlays + newText)
             }
-            is EditorIntent.UpdateTextOverlay -> mutateDocument { doc ->
+            is EditorIntent.UpdateTextOverlay -> mutateDocument("Modificar texto") { doc ->
                 doc.copy(textOverlays = doc.textOverlays.map {
                     if (it.id == intent.textItem.id) intent.textItem else it
                 })
             }
-            is EditorIntent.DeleteTextOverlay -> mutateDocument { doc ->
+            is EditorIntent.DeleteTextOverlay -> mutateDocument("Eliminar texto") { doc ->
                 doc.copy(textOverlays = doc.textOverlays.filterNot { it.id == intent.textId })
             }
-            is EditorIntent.AddCloneStamp -> mutateDocument { doc ->
+            is EditorIntent.AddCloneStamp -> mutateDocument("Tampón de clonar") { doc ->
                 val newStamp = EditOperation.CloneStampPoint(
                     sourceX = intent.sourceX,
                     sourceY = intent.sourceY,
@@ -129,7 +136,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                 )
                 doc.copy(cloneStamps = doc.cloneStamps + newStamp)
             }
-            is EditorIntent.ClearCloneStamps -> mutateDocument { doc ->
+            is EditorIntent.ClearCloneStamps -> mutateDocument("Limpiar clones") { doc ->
                 doc.copy(cloneStamps = emptyList())
             }
 
@@ -163,11 +170,37 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             is EditorIntent.SelectActiveLayer -> _uiState.update { it.copy(activeLayerId = intent.layerId) }
 
             // Geometry & Crop
-            is EditorIntent.UpdateCropTransform -> mutateDocument { it.copy(cropTransform = intent.cropTransform) }
-            is EditorIntent.SetCropAspectRatio -> mutateDocument { doc ->
+            is EditorIntent.BeginCropInteraction -> {
+                isInteractingCrop = true
+                if (dragStartDocument == null) {
+                    dragStartDocument = _uiState.value.document
+                }
+            }
+            is EditorIntent.CommitCropTransform -> {
+                isInteractingCrop = false
+                val startDoc = dragStartDocument
+                dragStartDocument = null
+                val currentDoc = _uiState.value.document
+                if (startDoc != null && currentDoc != null && startDoc.cropTransform != currentDoc.cropTransform) {
+                    historyManager.pushState(startDoc, currentActionDescription)
+                    currentActionDescription = intent.actionLabel
+                    val history = historyManager.getOperationsHistory() + currentActionDescription
+                    _uiState.update {
+                        it.copy(
+                            canUndo = historyManager.canUndo,
+                            canRedo = historyManager.canRedo,
+                            undoActionName = historyManager.nextUndoActionName,
+                            redoActionName = historyManager.nextRedoActionName,
+                            historyList = history
+                        )
+                    }
+                }
+            }
+            is EditorIntent.UpdateCropTransform -> handleUpdateCropTransform(intent.cropTransform)
+            is EditorIntent.SetCropAspectRatio -> mutateDocument("Proporción ${intent.aspectRatio.name}") { doc ->
                 doc.copy(cropTransform = doc.cropTransform.copy(aspectRatio = intent.aspectRatio, scale = 1.0f, panXNorm = 0f, panYNorm = 0f))
             }
-            is EditorIntent.SetCropScaleMode -> mutateDocument { doc ->
+            is EditorIntent.SetCropScaleMode -> mutateDocument("Escala ${intent.scaleMode.name}") { doc ->
                 val newScale = when (intent.scaleMode) {
                     CropScaleMode.FIT -> 1.0f
                     CropScaleMode.FILL -> 1.25f
@@ -175,27 +208,25 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                 }
                 doc.copy(cropTransform = doc.cropTransform.copy(scaleMode = intent.scaleMode, scale = newScale, panXNorm = 0f, panYNorm = 0f))
             }
-            is EditorIntent.ToggleCropRuleOfThirds -> mutateDocument { doc ->
+            is EditorIntent.ToggleCropRuleOfThirds -> mutateDocument("Regla de tercios") { doc ->
                 doc.copy(cropTransform = doc.cropTransform.copy(showRuleOfThirds = intent.show))
             }
-            is EditorIntent.Rotate90Clockwise -> mutateDocument { doc ->
+            is EditorIntent.Rotate90Clockwise -> mutateDocument("Rotar 90° horario") { doc ->
                 val nextRot = (doc.cropTransform.rotation90Degrees + 90) % 360
                 doc.copy(cropTransform = doc.cropTransform.copy(rotation90Degrees = nextRot))
             }
-            is EditorIntent.Rotate90CounterClockwise -> mutateDocument { doc ->
+            is EditorIntent.Rotate90CounterClockwise -> mutateDocument("Rotar 90° antihorario") { doc ->
                 val nextRot = (doc.cropTransform.rotation90Degrees - 90 + 360) % 360
                 doc.copy(cropTransform = doc.cropTransform.copy(rotation90Degrees = nextRot))
             }
-            is EditorIntent.ToggleFlipHorizontal -> mutateDocument { doc ->
+            is EditorIntent.ToggleFlipHorizontal -> mutateDocument("Volteo horizontal") { doc ->
                 doc.copy(cropTransform = doc.cropTransform.copy(flipHorizontal = !doc.cropTransform.flipHorizontal))
             }
-            is EditorIntent.ToggleFlipVertical -> mutateDocument { doc ->
+            is EditorIntent.ToggleFlipVertical -> mutateDocument("Volteo vertical") { doc ->
                 doc.copy(cropTransform = doc.cropTransform.copy(flipVertical = !doc.cropTransform.flipVertical))
             }
-            is EditorIntent.UpdateStraightenAngle -> mutateDocument { doc ->
-                doc.copy(cropTransform = doc.cropTransform.copy(fineStraightenAngle = intent.angle))
-            }
-            is EditorIntent.ApplyCropNorm -> mutateDocument { doc ->
+            is EditorIntent.UpdateStraightenAngle -> handleUpdateStraightenAngle(intent.angle, intent.isFinished)
+            is EditorIntent.ApplyCropNorm -> mutateDocument("Recorte libre") { doc ->
                 doc.copy(
                     cropTransform = doc.cropTransform.copy(
                         cropLeftNorm = intent.left.coerceIn(0f, 0.9f),
@@ -206,7 +237,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                 )
             }
             is EditorIntent.ApplyAspectRatioCrop -> applyAspectRatio(intent.ratioW, intent.ratioH)
-            is EditorIntent.ResetCrop -> mutateDocument { doc ->
+            is EditorIntent.ResetCrop -> mutateDocument("Restablecer recorte") { doc ->
                 doc.copy(
                     cropTransform = doc.cropTransform.copy(
                         scale = 1.0f,
@@ -220,7 +251,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                     )
                 )
             }
-            is EditorIntent.ResetGeometry -> mutateDocument { doc ->
+            is EditorIntent.ResetGeometry -> mutateDocument("Restablecer geometría") { doc ->
                 doc.copy(cropTransform = EditOperation.CropTransform())
             }
 
@@ -243,6 +274,9 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                     originalHeight = bitmap.height
                 )
                 historyManager.clear()
+                currentActionDescription = "Imagen original"
+                dragStartDocument = null
+                isInteractingCrop = false
                 val preview = renderPipeline.renderPreview(bitmap, initialDoc)
                 _uiState.update {
                     it.copy(
@@ -251,7 +285,10 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                         previewBitmap = preview,
                         document = initialDoc,
                         canUndo = false,
-                        canRedo = false
+                        canRedo = false,
+                        undoActionName = null,
+                        redoActionName = null,
+                        historyList = listOf("Imagen original")
                     )
                 }
             }.onFailure { error ->
@@ -542,7 +579,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             cropR = 1f - diff
         }
 
-        mutateDocument { doc ->
+        mutateDocument("Recorte ${ratioW.toInt()}:${ratioH.toInt()}") { doc ->
             doc.copy(
                 cropTransform = doc.cropTransform.copy(
                     cropLeftNorm = cropL,
@@ -554,20 +591,144 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    private fun mutateDocument(transform: (EditorDocument) -> EditorDocument) {
+    private fun handleUpdateAdjustments(
+        adjustments: EditOperation.Adjustments,
+        isFinished: Boolean,
+        actionLabel: String
+    ) {
+        val currentDoc = _uiState.value.document ?: return
+        val baseBmp = _uiState.value.originalBitmap ?: return
+
+        if (!isFinished) {
+            if (dragStartDocument == null) {
+                dragStartDocument = currentDoc
+            }
+            val updatedDoc = currentDoc.copy(adjustments = adjustments)
+            _uiState.update { it.copy(document = updatedDoc) }
+            renderJob?.cancel()
+            renderJob = viewModelScope.launch {
+                val updatedPreview = renderPipeline.renderPreview(baseBmp, updatedDoc)
+                _uiState.update { it.copy(previewBitmap = updatedPreview) }
+            }
+        } else {
+            val startDoc = dragStartDocument ?: currentDoc
+            dragStartDocument = null
+
+            val updatedDoc = currentDoc.copy(adjustments = adjustments)
+            if (updatedDoc == startDoc) {
+                _uiState.update { it.copy(document = updatedDoc) }
+                return
+            }
+
+            historyManager.pushState(startDoc, currentActionDescription)
+            currentActionDescription = actionLabel
+
+            val history = historyManager.getOperationsHistory() + currentActionDescription
+            _uiState.update {
+                it.copy(
+                    document = updatedDoc,
+                    canUndo = historyManager.canUndo,
+                    canRedo = historyManager.canRedo,
+                    undoActionName = historyManager.nextUndoActionName,
+                    redoActionName = historyManager.nextRedoActionName,
+                    historyList = history
+                )
+            }
+
+            renderJob?.cancel()
+            renderJob = viewModelScope.launch {
+                val updatedPreview = renderPipeline.renderPreview(baseBmp, updatedDoc)
+                _uiState.update { it.copy(previewBitmap = updatedPreview) }
+            }
+        }
+    }
+
+    private fun handleUpdateCropTransform(transform: EditOperation.CropTransform) {
+        val currentDoc = _uiState.value.document ?: return
+        val baseBmp = _uiState.value.originalBitmap ?: return
+
+        if (transform == currentDoc.cropTransform) return
+
+        if (isInteractingCrop) {
+            val updatedDoc = currentDoc.copy(cropTransform = transform)
+            _uiState.update { it.copy(document = updatedDoc) }
+            renderJob?.cancel()
+            renderJob = viewModelScope.launch {
+                val updatedPreview = renderPipeline.renderPreview(baseBmp, updatedDoc)
+                _uiState.update { it.copy(previewBitmap = updatedPreview) }
+            }
+        } else {
+            mutateDocument("Recorte y encuadre") { it.copy(cropTransform = transform) }
+        }
+    }
+
+    private fun handleUpdateStraightenAngle(angle: Float, isFinished: Boolean) {
+        val currentDoc = _uiState.value.document ?: return
+        val baseBmp = _uiState.value.originalBitmap ?: return
+
+        if (!isFinished) {
+            if (dragStartDocument == null) {
+                dragStartDocument = currentDoc
+            }
+            val updatedDoc = currentDoc.copy(cropTransform = currentDoc.cropTransform.copy(fineStraightenAngle = angle))
+            _uiState.update { it.copy(document = updatedDoc) }
+            renderJob?.cancel()
+            renderJob = viewModelScope.launch {
+                val updatedPreview = renderPipeline.renderPreview(baseBmp, updatedDoc)
+                _uiState.update { it.copy(previewBitmap = updatedPreview) }
+            }
+        } else {
+            val startDoc = dragStartDocument ?: currentDoc
+            dragStartDocument = null
+            val updatedDoc = currentDoc.copy(cropTransform = currentDoc.cropTransform.copy(fineStraightenAngle = angle))
+            if (startDoc == updatedDoc) return
+
+            historyManager.pushState(startDoc, currentActionDescription)
+            currentActionDescription = "Enderezar ${angle.toInt()}°"
+
+            val history = historyManager.getOperationsHistory() + currentActionDescription
+            _uiState.update {
+                it.copy(
+                    document = updatedDoc,
+                    canUndo = historyManager.canUndo,
+                    canRedo = historyManager.canRedo,
+                    undoActionName = historyManager.nextUndoActionName,
+                    redoActionName = historyManager.nextRedoActionName,
+                    historyList = history
+                )
+            }
+
+            renderJob?.cancel()
+            renderJob = viewModelScope.launch {
+                val updatedPreview = renderPipeline.renderPreview(baseBmp, updatedDoc)
+                _uiState.update { it.copy(previewBitmap = updatedPreview) }
+            }
+        }
+    }
+
+    private fun mutateDocument(
+        actionName: String = "Operación",
+        transform: (EditorDocument) -> EditorDocument
+    ) {
         val currentDoc = _uiState.value.document ?: return
         val baseBmp = _uiState.value.originalBitmap ?: return
 
         val updatedDoc = transform(currentDoc)
         if (updatedDoc == currentDoc) return
 
-        historyManager.pushState(currentDoc)
+        historyManager.pushState(currentDoc, currentActionDescription)
+        currentActionDescription = actionName
+        dragStartDocument = null
 
+        val history = historyManager.getOperationsHistory() + currentActionDescription
         _uiState.update {
             it.copy(
                 document = updatedDoc,
                 canUndo = historyManager.canUndo,
-                canRedo = historyManager.canRedo
+                canRedo = historyManager.canRedo,
+                undoActionName = historyManager.nextUndoActionName,
+                redoActionName = historyManager.nextRedoActionName,
+                historyList = history
             )
         }
 
@@ -582,38 +743,62 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
 
     private fun performUndo() {
         val currentDoc = _uiState.value.document ?: return
-        val prevDoc = historyManager.undo(currentDoc) ?: return
+        val result = historyManager.undo(currentDoc, currentActionDescription) ?: return
+        val prevDoc = result.first
+        currentActionDescription = result.second
+        dragStartDocument = null
+        isInteractingCrop = false
+
         val baseBmp = _uiState.value.originalBitmap ?: return
+        val history = historyManager.getOperationsHistory() + currentActionDescription
+
+        _uiState.update {
+            it.copy(
+                document = prevDoc,
+                canUndo = historyManager.canUndo,
+                canRedo = historyManager.canRedo,
+                undoActionName = historyManager.nextUndoActionName,
+                redoActionName = historyManager.nextRedoActionName,
+                historyList = history
+            )
+        }
 
         renderJob?.cancel()
         renderJob = viewModelScope.launch {
             val preview = renderPipeline.renderPreview(baseBmp, prevDoc)
             _uiState.update {
-                it.copy(
-                    document = prevDoc,
-                    previewBitmap = preview,
-                    canUndo = historyManager.canUndo,
-                    canRedo = historyManager.canRedo
-                )
+                it.copy(previewBitmap = preview)
             }
         }
     }
 
     private fun performRedo() {
         val currentDoc = _uiState.value.document ?: return
-        val nextDoc = historyManager.redo(currentDoc) ?: return
+        val result = historyManager.redo(currentDoc, currentActionDescription) ?: return
+        val nextDoc = result.first
+        currentActionDescription = result.second
+        dragStartDocument = null
+        isInteractingCrop = false
+
         val baseBmp = _uiState.value.originalBitmap ?: return
+        val history = historyManager.getOperationsHistory() + currentActionDescription
+
+        _uiState.update {
+            it.copy(
+                document = nextDoc,
+                canUndo = historyManager.canUndo,
+                canRedo = historyManager.canRedo,
+                undoActionName = historyManager.nextUndoActionName,
+                redoActionName = historyManager.nextRedoActionName,
+                historyList = history
+            )
+        }
 
         renderJob?.cancel()
         renderJob = viewModelScope.launch {
             val preview = renderPipeline.renderPreview(baseBmp, nextDoc)
             _uiState.update {
-                it.copy(
-                    document = nextDoc,
-                    previewBitmap = preview,
-                    canUndo = historyManager.canUndo,
-                    canRedo = historyManager.canRedo
-                )
+                it.copy(previewBitmap = preview)
             }
         }
     }

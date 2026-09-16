@@ -20,3 +20,16 @@ Solución aplicada:
 4. Corrección de nombres de parámetros en `HyperEditorScreen` (`patchOperations`, `ClearPatchOperations`, `centerXNorm`).
 5. Agregado de `globalSmoothness` al modelo `EditOperation.FacialRelight`.
 Prevención: Mantener interfaces de intención y modelos de datos tipados estrictamente sincronizados en `EditorDocument`, `EditOperation` y `EditorIntent`.
+
+## [2026-09-15] Error: Pincel inoperativo / no dibuja al arrastrar el dedo sobre la foto
+Symptom: Al seleccionar la herramienta Pincel en Herramientas Creativas y arrastrar el dedo sobre la imagen, no aparecía ningún trazo.
+Root cause:
+1. En `HyperEditorScreen.kt`, el área central del viewport conmutaba entre `CropInteractiveCanvas` y `CloneStampInteractiveCanvas`, pero omitía por completo un componente interactivo para `selectedCreativeTool == 0` (Pincel). En su lugar se renderizaba el canvas pasivo predeterminado que no consumía eventos táctiles de dibujo.
+2. Los estados del pincel (`brushSize`, `brushColor`, `brushOpacity`, `isEraserMode`) estaban declarados con `remember` únicamente dentro del sub-bloque de la barra lateral, inaccesibles para el área del canvas.
+3. `BrushDrawRenderStage` interpretaba `strokeWidth` en píxeles absolutos sin escalar por la resolución del bitmap, lo que provocaba inconsistencias entre la previsualización reducida y la exportación de alta resolución.
+Applied solution:
+1. Creación de `BrushInteractiveCanvas.kt` con captura directa de gestos (`detectDragGestures`), trazado acelerado en tiempo real en Compose Canvas y cursor circular bajo el dedo.
+2. Elevación del estado del pincel al ámbito superior de `HyperEditorScreen` y conexión directa con `BrushInteractiveCanvas`.
+3. Normalización del grosor mediante factor de escala `minDim / 1000f` en el canvas y en `BrushDrawRenderStage`, y consolidación atómica en `onDragEnd` para un único paso en Undo/Redo.
+Prevention: Toda herramienta interactiva de dibujo o retoque debe tener un componente de viewport dedicado que capture gestos sobre la imagen con coordenadas normalizadas `[0f, 1f]` y cálculo de escala proporcional.
+

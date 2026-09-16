@@ -115,7 +115,10 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                     colorInt = intent.colorInt,
                     alignment = intent.alignment,
                     opacity = intent.opacity,
-                    fontFamilyName = intent.fontFamilyName
+                    fontFamilyName = intent.fontFamilyName,
+                    rotationDegrees = intent.rotationDegrees,
+                    scale = intent.scale,
+                    customFontPath = intent.customFontPath
                 )
                 doc.copy(textOverlays = doc.textOverlays + newText)
             }

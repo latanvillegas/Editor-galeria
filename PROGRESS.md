@@ -95,3 +95,17 @@ Archivos involucrados:
 - `app/src/main/java/com/hypereditor/nativegallery/ui/state/EditorViewModel.kt`
 - `app/src/main/java/com/hypereditor/nativegallery/domain/model/EditOperation.kt`
 
+## [2026-09-15] Corrección: Pincel Táctil Interactivo y Renderizado en Tiempo Real
+Estado: Completo y probado
+Descripción: Diagnóstico y resolución integral del fallo que impedía dibujar con el Pincel sobre la foto:
+1. **Captura Táctil Directa**: Implementación de `BrushInteractiveCanvas.kt` en el área de visualización (`viewport`) de `HyperEditorScreen` cuando `selectedTab == CREATIVE_TOOLS` y `selectedCreativeTool == 0`. Utiliza `pointerInput` y `detectDragGestures` directamente sobre la imagen, eliminando cualquier capa invisible que interceptara toques.
+2. **Renderizado en Tiempo Real**: Durante el arrastre del dedo (`onDrag`), los puntos se acumulan en un `mutableStateListOf<Offset>` y se renderizan a 60+ FPS en el overlay de Compose con `drawPath`, `StrokeCap.Round`, `StrokeJoin.Round` y cursor circular de grosor bajo el dedo.
+3. **Sincronización de Parámetros**: Se elevaron los estados `brushColor`, `brushSize`, `brushOpacity` e `isEraserMode` al ámbito superior de `HyperEditorScreen`, asegurando que la paleta, sliders de grosor y opacidad se reflejen de inmediato en el trazo activo.
+4. **Conversión Precisa de Coordenadas**: Se aplicó la transformación normalizada `[0f, 1f]` calculada sobre `computeImageBounds`, adaptando el grosor del trazo con factor de escala `minDim / 1000f` tanto en pantalla como en `BrushDrawRenderStage` para perfecta consistencia entre pantalla, previsualización y exportación (JPEG/PNG).
+5. **Integración con Deshacer/Rehacer**: El trazo se consolida como una única operación atómica (`EditorIntent.AddBrushStroke`) al levantar el dedo (`onDragEnd`), integrándose limpiamente en el historial con descripción "Trazo de pincel" o "Borrador de pincel".
+Archivos involucrados:
+- `app/src/main/java/com/hypereditor/nativegallery/ui/canvas/BrushInteractiveCanvas.kt`
+- `app/src/main/java/com/hypereditor/nativegallery/ui/HyperEditorScreen.kt`
+- `app/src/main/java/com/hypereditor/nativegallery/render/pipeline/BrushDrawRenderStage.kt`
+
+

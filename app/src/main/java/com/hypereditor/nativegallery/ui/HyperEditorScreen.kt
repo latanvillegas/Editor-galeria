@@ -82,6 +82,12 @@ fun HyperEditorScreen(
     var newTextLayerContent by remember { mutableStateOf("Texto de Capa") }
     var showAddStickerDialog by remember { mutableStateOf(false) }
 
+    // Retoque / Pincel y herramientas creativas
+    var brushSize by remember { mutableFloatStateOf(24f) }
+    var brushColor by remember { mutableIntStateOf(android.graphics.Color.RED) }
+    var brushOpacity by remember { mutableFloatStateOf(1.0f) }
+    var isEraserMode by remember { mutableStateOf(false) }
+
     // Retoque / Tampón de clonar táctil state
     var selectedCreativeTool by remember { mutableIntStateOf(0) } // 0: Pincel, 1: Texto, 2: Clone Stamp, 3: Healing
     var cloneMode by remember { mutableStateOf(com.hypereditor.nativegallery.ui.canvas.CloneMode.SELECT_ORIGIN) }
@@ -176,6 +182,34 @@ fun HyperEditorScreen(
                 )
             } catch (e: Exception) {
                 e.printStackTrace()
+            }
+        }
+    }
+
+    // Custom Font & Interactive Text State
+    var customFonts by remember { mutableStateOf(com.hypereditor.nativegallery.data.FontManager.loadSavedFonts(context)) }
+    var fontImportError by remember { mutableStateOf<String?>(null) }
+    var fontImportSuccess by remember { mutableStateOf<String?>(null) }
+    var selectedCustomFontPath by remember { mutableStateOf<String?>(null) }
+    var selectedTextId by remember { mutableStateOf<String?>(null) }
+    var newTextContent by remember { mutableStateOf("HyperEditor") }
+    var textSize by remember { mutableFloatStateOf(44f) }
+    var textFont by remember { mutableStateOf("SANS_SERIF") }
+
+    val fontPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            val result = com.hypereditor.nativegallery.data.FontManager.importFontFromUri(context, uri)
+            result.onSuccess { imported ->
+                customFonts = com.hypereditor.nativegallery.data.FontManager.loadSavedFonts(context)
+                textFont = imported.name
+                selectedCustomFontPath = imported.file.absolutePath
+                fontImportSuccess = "Tipografía '${imported.name}' importada exitosamente"
+                fontImportError = null
+            }.onFailure { err ->
+                fontImportError = err.localizedMessage ?: "Error al importar tipografía"
+                fontImportSuccess = null
             }
         }
     }
@@ -723,6 +757,46 @@ fun HyperEditorScreen(
                             .fillMaxHeight()
                     )
                 }
+            } else if (state.selectedTab == EditorSectionTab.CREATIVE_TOOLS && selectedCreativeTool == 0) {
+                com.hypereditor.nativegallery.ui.canvas.BrushInteractiveCanvas(
+                    bitmap = bitmapToDisplay,
+                    brushColor = brushColor,
+                    brushSize = brushSize,
+                    brushOpacity = brushOpacity,
+                    isEraserMode = isEraserMode,
+                    onApplyStroke = { stroke ->
+                        onIntent(EditorIntent.AddBrushStroke(stroke))
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                )
+            } else if (state.selectedTab == EditorSectionTab.CREATIVE_TOOLS && selectedCreativeTool == 1) {
+                val textCanvasBitmap = remember(bitmapToDisplay, state.document?.textOverlays?.size) {
+                    val src = state.originalBitmap
+                    val doc = state.document
+                    if (src != null && doc != null && doc.textOverlays.isNotEmpty()) {
+                        com.hypereditor.nativegallery.render.BitmapRenderer.renderDocument(src, doc.copy(textOverlays = emptyList()), isPreview = true)
+                    } else {
+                        bitmapToDisplay
+                    }
+                }
+                com.hypereditor.nativegallery.ui.canvas.TextInteractiveCanvas(
+                    bitmap = textCanvasBitmap,
+                    textOverlays = state.document?.textOverlays ?: emptyList(),
+                    selectedTextId = selectedTextId,
+                    onSelectText = { selectedTextId = it },
+                    onUpdateText = { updated ->
+                        onIntent(EditorIntent.UpdateTextOverlay(updated))
+                    },
+                    onDeleteText = { id ->
+                        if (selectedTextId == id) selectedTextId = null
+                        onIntent(EditorIntent.DeleteTextOverlay(id))
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                )
             } else if (state.selectedTab == EditorSectionTab.CREATIVE_TOOLS && selectedCreativeTool == 2) {
                 com.hypereditor.nativegallery.ui.canvas.CloneStampInteractiveCanvas(
                     bitmap = bitmapToDisplay,
@@ -1236,15 +1310,6 @@ fun HyperEditorScreen(
                             }
 
                             EditorSectionTab.CREATIVE_TOOLS -> {
-                                var brushSize by remember { mutableFloatStateOf(24f) }
-                                var brushColor by remember { mutableIntStateOf(android.graphics.Color.YELLOW) }
-                                var brushOpacity by remember { mutableFloatStateOf(1.0f) }
-                                var isEraserMode by remember { mutableStateOf(false) }
-
-                                var newTextContent by remember { mutableStateOf("HyperEditor") }
-                                var textSize by remember { mutableFloatStateOf(44f) }
-                                var textFont by remember { mutableStateOf("SANS_SERIF") }
-
                                 Text(text = "Herramientas Creativas y Retoque", color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp)
 
                                 // Selector de sub-herramienta
@@ -1348,30 +1413,29 @@ fun HyperEditorScreen(
                                             brushOpacity = it
                                         }
 
-                                        // Botón para trazar demostración / trazo rápido
-                                        Button(
-                                            onClick = {
-                                                val startX = 0.2f + (Math.random().toFloat() * 0.2f)
-                                                val startY = 0.3f + (Math.random().toFloat() * 0.4f)
-                                                val stroke = EditOperation.BrushDraw(
-                                                    points = listOf(
-                                                        Pair(startX, startY),
-                                                        Pair(startX + 0.25f, startY + 0.1f),
-                                                        Pair(startX + 0.5f, startY - 0.05f)
-                                                    ),
-                                                    colorInt = brushColor,
-                                                    strokeWidth = brushSize,
-                                                    opacity = brushOpacity,
-                                                    isEraser = isEraserMode
-                                                )
-                                                onIntent(EditorIntent.AddBrushStroke(stroke))
-                                            },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                                        // Indicador visual de dibujo táctil directo sobre la foto
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                                            modifier = Modifier.fillMaxWidth()
                                         ) {
-                                            Icon(if (isEraserMode) Icons.Default.Delete else Icons.Default.Draw, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(16.dp))
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Text(if (isEraserMode) "Aplicar Borrador" else "Añadir Trazo Pincel", color = MaterialTheme.colorScheme.onPrimary, fontSize = 12.sp)
+                                            Row(
+                                                modifier = Modifier.padding(10.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Brush,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                                Text(
+                                                    text = if (isEraserMode) "Arrastra el dedo sobre la foto para borrar trazos en tiempo real" else "Dibuja arrastrando el dedo directamente sobre la foto en tiempo real",
+                                                    fontSize = 12.sp,
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                                )
+                                            }
                                         }
 
                                         if ((state.document?.brushStrokes?.size ?: 0) > 0) {
@@ -1404,22 +1468,119 @@ fun HyperEditorScreen(
                                             textSize = it
                                         }
 
-                                        Text(text = "Tipografía:", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                                        // Cabecera de Tipografías con Botón de Importar
                                         Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(text = "Tipografía:", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                                            OutlinedButton(
+                                                onClick = {
+                                                    fontPickerLauncher.launch(
+                                                        arrayOf(
+                                                            "font/ttf",
+                                                            "font/otf",
+                                                            "application/x-font-ttf",
+                                                            "application/x-font-opentype",
+                                                            "application/octet-stream",
+                                                            "*/*"
+                                                        )
+                                                    )
+                                                },
+                                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                            ) {
+                                                Icon(Icons.Default.FileOpen, contentDescription = null, modifier = Modifier.size(14.dp))
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text("Importar fuente", fontSize = 11.sp)
+                                            }
+                                        }
+
+                                        // Mensaje de Error en Importación
+                                        if (fontImportError != null) {
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = MaterialTheme.colorScheme.errorContainer,
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    Text(text = fontImportError!!, color = MaterialTheme.colorScheme.onErrorContainer, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                                                    IconButton(onClick = { fontImportError = null }, modifier = Modifier.size(20.dp)) {
+                                                        Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(14.dp))
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        // Mensaje de Éxito en Importación
+                                        if (fontImportSuccess != null) {
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = Color(0xFF1B5E20).copy(alpha = 0.2f),
+                                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF4CAF50)),
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF4CAF50), modifier = Modifier.size(16.dp))
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    Text(text = fontImportSuccess!!, color = MaterialTheme.colorScheme.onSurface, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                                                    IconButton(onClick = { fontImportSuccess = null }, modifier = Modifier.size(20.dp)) {
+                                                        Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        // Selector de Tipografías (Sistema + Fuentes Personalizadas)
+                                        androidx.compose.foundation.lazy.LazyRow(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                                         ) {
-                                            listOf("SANS_SERIF", "SERIF", "MONOSPACE", "CURSIVE").forEach { font ->
+                                            // Fuentes del Sistema
+                                            items(listOf("SANS_SERIF", "SERIF", "MONOSPACE", "CURSIVE").size) { idx ->
+                                                val font = listOf("SANS_SERIF", "SERIF", "MONOSPACE", "CURSIVE")[idx]
+                                                val isCurrent = (textFont == font && selectedCustomFontPath == null)
                                                 OutlinedButton(
-                                                    onClick = { textFont = font },
+                                                    onClick = {
+                                                        textFont = font
+                                                        selectedCustomFontPath = null
+                                                    },
                                                     colors = ButtonDefaults.outlinedButtonColors(
-                                                        containerColor = if (textFont == font) MaterialTheme.colorScheme.primary else Color.Transparent,
-                                                        contentColor = if (textFont == font) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                                                        containerColor = if (isCurrent) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                                        contentColor = if (isCurrent) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                                                     ),
-                                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
-                                                    modifier = Modifier.weight(1f)
+                                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                                                 ) {
-                                                    Text(font.take(4), fontSize = 10.sp)
+                                                    Text(font.take(6), fontSize = 11.sp)
+                                                }
+                                            }
+
+                                            // Fuentes importadas por el usuario
+                                            items(customFonts.size) { idx ->
+                                                val cFont = customFonts[idx]
+                                                val isCurrent = (selectedCustomFontPath == cFont.file.absolutePath)
+                                                OutlinedButton(
+                                                    onClick = {
+                                                        textFont = cFont.name
+                                                        selectedCustomFontPath = cFont.file.absolutePath
+                                                    },
+                                                    colors = ButtonDefaults.outlinedButtonColors(
+                                                        containerColor = if (isCurrent) MaterialTheme.colorScheme.secondary else Color.Transparent,
+                                                        contentColor = if (isCurrent) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurface
+                                                    ),
+                                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                                                ) {
+                                                    Icon(Icons.Default.FontDownload, contentDescription = null, modifier = Modifier.size(12.dp))
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text(cFont.name.take(10), fontSize = 11.sp)
                                                 }
                                             }
                                         }
@@ -1427,15 +1588,20 @@ fun HyperEditorScreen(
                                         Button(
                                             onClick = {
                                                 if (newTextContent.isNotBlank()) {
+                                                    val newId = java.util.UUID.randomUUID().toString()
                                                     onIntent(
                                                         EditorIntent.AddTextOverlay(
                                                             text = newTextContent,
-                                                            posX = 0.15f,
-                                                            posY = 0.5f + ((state.document?.textOverlays?.size ?: 0) * 0.08f),
+                                                            posX = 0.5f,
+                                                            posY = 0.5f + ((state.document?.textOverlays?.size ?: 0) * 0.06f).coerceAtMost(0.35f),
                                                             textSize = textSize,
-                                                            fontFamilyName = textFont
+                                                            fontFamilyName = textFont,
+                                                            rotationDegrees = 0f,
+                                                            scale = 1.0f,
+                                                            customFontPath = selectedCustomFontPath
                                                         )
                                                     )
+                                                    selectedTextId = newId
                                                 }
                                             },
                                             modifier = Modifier.fillMaxWidth(),
@@ -1443,16 +1609,42 @@ fun HyperEditorScreen(
                                         ) {
                                             Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(16.dp))
                                             Spacer(modifier = Modifier.width(6.dp))
-                                            Text("Insertar Texto", color = MaterialTheme.colorScheme.onPrimary, fontSize = 12.sp)
+                                            Text("Insertar Texto en Foto", color = MaterialTheme.colorScheme.onPrimary, fontSize = 12.sp)
                                         }
 
-                                        // Lista de textos añadidos
+                                        // Indicador de Interacción Táctil
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Icon(Icons.Default.TouchApp, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = "Arrastra con un dedo para mover. Pellizca con 2 dedos o usa los handles para rotar y escalar libremente.",
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    fontSize = 10.sp
+                                                )
+                                            }
+                                        }
+
+                                        // Lista de textos añadidos con selector táctil
                                         state.document?.textOverlays?.forEach { txt ->
+                                            val isSelected = (txt.id == selectedTextId)
                                             Surface(
                                                 shape = RoundedCornerShape(8.dp),
-                                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
-                                                modifier = Modifier.fillMaxWidth()
+                                                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                                                border = androidx.compose.foundation.BorderStroke(
+                                                    1.dp,
+                                                    if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                                                ),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clickable { selectedTextId = txt.id }
                                             ) {
                                                 Row(
                                                     modifier = Modifier
@@ -1462,11 +1654,23 @@ fun HyperEditorScreen(
                                                     horizontalArrangement = Arrangement.SpaceBetween
                                                 ) {
                                                     Column(modifier = Modifier.weight(1f)) {
-                                                        Text(text = txt.text, color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp)
-                                                        Text(text = "Fuente: ${txt.fontFamilyName} (${txt.textSize.toInt()}sp)", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+                                                        Text(
+                                                            text = txt.text,
+                                                            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                                                            fontSize = 13.sp,
+                                                            fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal
+                                                        )
+                                                        Text(
+                                                            text = "Fuente: ${txt.fontFamilyName} • Rotación: ${txt.rotationDegrees.toInt()}° • Escala: ${String.format(java.util.Locale.US, "%.1f", txt.scale)}x",
+                                                            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                            fontSize = 10.sp
+                                                        )
                                                     }
                                                     IconButton(
-                                                        onClick = { onIntent(EditorIntent.DeleteTextOverlay(txt.id)) },
+                                                        onClick = {
+                                                            if (selectedTextId == txt.id) selectedTextId = null
+                                                            onIntent(EditorIntent.DeleteTextOverlay(txt.id))
+                                                        },
                                                         modifier = Modifier.size(28.dp)
                                                     ) {
                                                         Icon(Icons.Default.DeleteOutline, contentDescription = "Borrar", tint = Color(0xFFFF6B6B), modifier = Modifier.size(16.dp))

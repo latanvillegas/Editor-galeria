@@ -77,7 +77,10 @@ sealed interface EditOperation : Parcelable {
         val colorInt: Int = Color.WHITE,
         val alignment: Int = 0,
         val opacity: Float = 1.0f,
-        val fontFamilyName: String = "SANS_SERIF"
+        val fontFamilyName: String = "SANS_SERIF",
+        val rotationDegrees: Float = 0f,
+        val scale: Float = 1.0f,
+        val customFontPath: String? = null
     ) : EditOperation
 
     @Parcelize

@@ -37,13 +37,16 @@ sealed interface EditorIntent {
     data object ClearBrushStrokes : EditorIntent
     data class AddTextOverlay(
         val text: String,
-        val posX: Float = 0.1f,
+        val posX: Float = 0.5f,
         val posY: Float = 0.5f,
         val textSize: Float = 48f,
         val colorInt: Int = android.graphics.Color.WHITE,
         val alignment: Int = 0,
         val opacity: Float = 1.0f,
-        val fontFamilyName: String = "SANS_SERIF"
+        val fontFamilyName: String = "SANS_SERIF",
+        val rotationDegrees: Float = 0f,
+        val scale: Float = 1.0f,
+        val customFontPath: String? = null
     ) : EditorIntent
     data class UpdateTextOverlay(val textItem: EditOperation.TextOverlay) : EditorIntent
     data class DeleteTextOverlay(val textId: String) : EditorIntent

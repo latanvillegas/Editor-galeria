@@ -3,6 +3,7 @@ package com.hypereditor.nativegallery.render.pipeline
 import android.graphics.*
 import com.hypereditor.nativegallery.domain.model.EditOperation
 import com.hypereditor.nativegallery.domain.model.EditorDocument
+import java.io.File
 
 class TextOverlayRenderStage : RenderStage {
     override val name: String = "TextOverlayRenderStage"
@@ -16,42 +17,68 @@ class TextOverlayRenderStage : RenderStage {
         val canvas = Canvas(result)
         val width = input.width.toFloat()
         val height = input.height.toFloat()
+        val minDim = minOf(width, height)
+        val scaleFactor = minDim / 1000f
 
         for (textItem in document.textOverlays) {
             if (textItem.text.isBlank()) continue
 
-            val typeface = when (textItem.fontFamilyName.uppercase()) {
-                "SERIF" -> Typeface.create(Typeface.SERIF, Typeface.BOLD)
-                "MONOSPACE" -> Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-                "CURSIVE" -> Typeface.create(Typeface.SANS_SERIF, Typeface.ITALIC)
-                else -> Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+            val typeface = if (!textItem.customFontPath.isNullOrBlank()) {
+                try {
+                    val fontFile = File(textItem.customFontPath)
+                    if (fontFile.exists() && fontFile.canRead()) {
+                        Typeface.createFromFile(fontFile) ?: getSystemTypeface(textItem.fontFamilyName)
+                    } else {
+                        getSystemTypeface(textItem.fontFamilyName)
+                    }
+                } catch (_: Exception) {
+                    getSystemTypeface(textItem.fontFamilyName)
+                }
+            } else {
+                getSystemTypeface(textItem.fontFamilyName)
             }
+
+            val effectiveSize = (textItem.textSize * textItem.scale * scaleFactor).coerceAtLeast(10f)
 
             val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 this.typeface = typeface
-                textSize = textItem.textSize.coerceAtLeast(14f)
+                textSize = effectiveSize
                 color = textItem.colorInt
                 alpha = (textItem.opacity.coerceIn(0f, 1f) * 255).toInt()
-                textAlign = when (textItem.alignment) {
-                    1 -> Paint.Align.CENTER
-                    2 -> Paint.Align.RIGHT
-                    else -> Paint.Align.LEFT
-                }
-                // Sombra sutil para legibilidad
-                setShadowLayer(4f, 2f, 2f, Color.argb(180, 0, 0, 0))
+                textAlign = Paint.Align.CENTER
+                setShadowLayer(effectiveSize * 0.08f, 2f * scaleFactor, 2f * scaleFactor, Color.argb(180, 0, 0, 0))
             }
 
-            val px = textItem.posX * width
-            val py = textItem.posY * height
+            val cx = textItem.posX * width
+            val cy = textItem.posY * height
+
+            canvas.save()
+            if (textItem.rotationDegrees != 0f) {
+                canvas.rotate(textItem.rotationDegrees, cx, cy)
+            }
 
             val lines = textItem.text.split("\n")
-            var currentY = py
+            val lineHeight = paint.fontSpacing
+            val totalHeight = lines.size * lineHeight
+
+            var currentY = cy - (totalHeight / 2f) + (effectiveSize * 0.8f)
             for (line in lines) {
-                canvas.drawText(line, px, currentY, paint)
-                currentY += paint.textSize * 1.25f
+                canvas.drawText(line, cx, currentY, paint)
+                currentY += lineHeight
             }
+            canvas.restore()
         }
 
         return result
     }
+
+    private fun getSystemTypeface(fontName: String): Typeface {
+        return when (fontName.uppercase()) {
+            "SERIF" -> Typeface.create(Typeface.SERIF, Typeface.BOLD)
+            "MONOSPACE" -> Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+            "CURSIVE" -> Typeface.create(Typeface.SANS_SERIF, Typeface.ITALIC)
+            else -> Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+        }
+    }
 }
+

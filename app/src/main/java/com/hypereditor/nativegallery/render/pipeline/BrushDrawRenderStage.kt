@@ -16,15 +16,19 @@ class BrushDrawRenderStage : RenderStage {
         val canvas = Canvas(result)
         val width = input.width.toFloat()
         val height = input.height.toFloat()
+        val minDim = minOf(width, height)
+        val scaleFactor = minDim / 1000f
 
         for (stroke in document.brushStrokes) {
             if (stroke.points.size < 2) continue
+
+            val strokeWidthPx = (stroke.strokeWidth * scaleFactor).coerceAtLeast(2f)
 
             val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 style = Paint.Style.STROKE
                 strokeCap = Paint.Cap.ROUND
                 strokeJoin = Paint.Join.ROUND
-                strokeWidth = stroke.strokeWidth.coerceAtLeast(2f)
+                strokeWidth = strokeWidthPx
                 if (stroke.isEraser) {
                     // Borrador sobre imagen
                     xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)

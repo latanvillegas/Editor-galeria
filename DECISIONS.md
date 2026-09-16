@@ -30,3 +30,10 @@
 - **Decisión**: Implementar `CustomCropInteractiveCanvas` de forma independiente a `CropInteractiveCanvas`. El recorte de aspecto libre usa un modelo táctil interactivo con 8 asas (esquinas y puntos medios) y cálculo dinámico de `ImageBounds` con destructuring en Kotlin (`val (imgLeft, imgTop, imgW, imgH) = computeImageBounds(canvasSize, bitmap)`).
 - **Razón**: Evita interferir con la lógica de proporciones fijas (1:1, 4:3, 16:9, etc.) que ya funcionaba en la app y proporciona una experiencia limpia de selección libre basada en coordenadas normalizadas seguras en el documento.
 - **Unificación de Límites**: Creación de `ImageBounds.kt` en `ui.canvas` como `data class` compartida, garantizando operadores de destructuring automáticos para Compose y eliminando errores de tipo o referencias no resueltas.
+
+## [2026-09-15] Arquitectura del Pincel Táctil en Tiempo Real y Normalización Proporcional
+- **Decisión**:
+  1. Integración de `BrushInteractiveCanvas` como viewport interactivo en `selectedCreativeTool == 0` con captura de gestos táctiles mediante `pointerInput` y `detectDragGestures` directamente sobre la imagen.
+  2. Renderizado híbrido en tiempo real: trazo activo dibujado directamente en el canvas acelerado por hardware de Compose mientras se arrastra el dedo; al levantar el dedo se emite una única intención `EditorIntent.AddBrushStroke` que muta inmutablemente `document.brushStrokes` para el pipeline no destructivo.
+  3. Escalado proporcional de grosor (`minDim / 1000f`): el grosor del trazo se calcula relativo a la dimensión mínima de la imagen tanto en la visualización en pantalla como en `BrushDrawRenderStage`, garantizando que el trazo se vea idéntico en pantalla, en previsualización y en exportaciones de alta resolución (JPEG/PNG).
+

@@ -774,7 +774,7 @@ fun HyperEditorScreen(
                     onApplyPatch = { patch ->
                         onIntent(EditorIntent.AddPatchOperation(patch))
                     },
-                    patchesCount = state.document?.patches?.size ?: 0,
+                    patchesCount = state.document?.patchOperations?.size ?: 0,
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
@@ -1816,10 +1816,10 @@ fun HyperEditorScreen(
                                             }
                                         }
 
-                                        val totalPatches = state.document?.patches?.size ?: 0
+                                        val totalPatches = state.document?.patchOperations?.size ?: 0
                                         if (totalPatches > 0) {
                                             OutlinedButton(
-                                                onClick = { onIntent(EditorIntent.ClearPatches) },
+                                                onClick = { onIntent(EditorIntent.ClearPatchOperations) },
                                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF6B6B)),
                                                 modifier = Modifier.fillMaxWidth()
                                             ) {
@@ -1907,10 +1907,10 @@ fun HyperEditorScreen(
                                         OutlinedButton(
                                             onClick = {
                                                 val reset = EditOperation.PortraitLight(
-                                                    centerX = 0.5f,
-                                                    centerY = 0.45f,
-                                                    radiusX = 0.35f,
-                                                    radiusY = 0.45f,
+                                                    centerXNorm = 0.5f,
+                                                    centerYNorm = 0.45f,
+                                                    radiusXNorm = 0.35f,
+                                                    radiusYNorm = 0.45f,
                                                     exposure = 0.35f,
                                                     shadows = 0.2f,
                                                     highlights = 0.15f,

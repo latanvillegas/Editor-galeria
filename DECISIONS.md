@@ -25,3 +25,8 @@
   3. **Luz de Retrato (Studio Relight)**: Se modela como una elipse de gradiente suave con traslación 2D interactiva. Modifica simultáneamente exposición, sombras y calidez sin alterar los píxeles destructivamente.
   4. **Reiluminación Facial Anatómica**: 6 zonas de control paramétrico (`FacialRelightZone`) con anclajes táctiles editables directamente en el canvas de Compose.
   5. **Undo/Redo**: Cada acción confirmada genera un estado inmutable en `EditorDocument` asegurando compatibilidad total con el historial.
+
+## [2026-09-15] Recorte Personalizado (Selección Libre Real) y Unificación de Límites
+- **Decisión**: Implementar `CustomCropInteractiveCanvas` de forma independiente a `CropInteractiveCanvas`. El recorte de aspecto libre usa un modelo táctil interactivo con 8 asas (esquinas y puntos medios) y cálculo dinámico de `ImageBounds` con destructuring en Kotlin (`val (imgLeft, imgTop, imgW, imgH) = computeImageBounds(canvasSize, bitmap)`).
+- **Razón**: Evita interferir con la lógica de proporciones fijas (1:1, 4:3, 16:9, etc.) que ya funcionaba en la app y proporciona una experiencia limpia de selección libre basada en coordenadas normalizadas seguras en el documento.
+- **Unificación de Límites**: Creación de `ImageBounds.kt` en `ui.canvas` como `data class` compartida, garantizando operadores de destructuring automáticos para Compose y eliminando errores de tipo o referencias no resueltas.

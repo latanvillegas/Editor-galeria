@@ -59,6 +59,7 @@ sealed interface EditorIntent {
     data class UpdatePortraitLight(val light: EditOperation.PortraitLight, val isFinished: Boolean = true) : EditorIntent
     data object ClearPortraitLights : EditorIntent
     data class UpdateFacialRelight(val relight: EditOperation.FacialRelight, val isFinished: Boolean = true) : EditorIntent
+    data class UpdateFacialRelightZones(val zones: List<EditOperation.FacialRelightZone>, val isFinished: Boolean = true) : EditorIntent
     data class UpdateFacialZone(val zone: EditOperation.FacialRelightZone, val isFinished: Boolean = true) : EditorIntent
     data object ClearFacialRelights : EditorIntent
 

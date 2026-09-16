@@ -78,3 +78,20 @@ Archivos involucrados:
 - `app/src/main/java/com/hypereditor/nativegallery/ui/state/EditorIntent.kt`
 - `app/src/main/java/com/hypereditor/nativegallery/ui/state/EditorViewModel.kt`
 
+## [2026-09-15] Funcionalidad: Recorte Personalizado / Selección Libre Real
+Estado: Completo y probado
+Descripción: Nueva herramienta independiente ("Recorte libre") añadida en la pestaña de Geometría y Recorte sin reemplazar ni alterar el recorte por aspecto existente.
+- Muestra la imagen completa dentro del canvas con cálculo de escala `Fit`.
+- Rectángulo de recorte editable encima de la imagen con overlay oscuro exterior.
+- 8 puntos táctiles de control visibles (4 esquinas y 4 lados centrales) con tolerancia táctil generosa.
+- Gestos: arrastre interior para mover toda la selección dentro de los límites de la imagen; arrastre de esquinas y lados para redimensionar libremente sin restricción de aspecto.
+- Tamaño mínimo garantizado (50px) y clamping dentro de la imagen.
+- Botones de acción "Cancelar" y "Aplicar Selección Libre", con integración directa en `EditorViewModel.mutateDocument` para soporte completo de Deshacer / Rehacer.
+Archivos involucrados:
+- `app/src/main/java/com/hypereditor/nativegallery/ui/canvas/CustomCropInteractiveCanvas.kt`
+- `app/src/main/java/com/hypereditor/nativegallery/ui/canvas/ImageBounds.kt`
+- `app/src/main/java/com/hypereditor/nativegallery/ui/HyperEditorScreen.kt`
+- `app/src/main/java/com/hypereditor/nativegallery/ui/state/EditorIntent.kt`
+- `app/src/main/java/com/hypereditor/nativegallery/ui/state/EditorViewModel.kt`
+- `app/src/main/java/com/hypereditor/nativegallery/domain/model/EditOperation.kt`
+

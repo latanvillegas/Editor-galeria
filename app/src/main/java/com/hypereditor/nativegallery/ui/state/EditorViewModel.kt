@@ -1,6 +1,7 @@
 package com.hypereditor.nativegallery.ui.state
 
 import android.app.Application
+import android.graphics.Bitmap
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -159,6 +160,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                 doc.copy(portraitLights = emptyList())
             }
             is EditorIntent.UpdateFacialRelight -> updateFacialRelight(intent.relight, intent.isFinished)
+            is EditorIntent.UpdateFacialRelightZones -> updateFacialRelightZones(intent.zones, intent.isFinished)
             is EditorIntent.UpdateFacialZone -> updateFacialZone(intent.zone, intent.isFinished)
             is EditorIntent.ClearFacialRelights -> mutateDocument("Limpiar reiluminación facial") { doc ->
                 doc.copy(facialRelights = emptyList())
@@ -662,6 +664,27 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         }
         val newRelight = targetRelight.copy(zones = updatedZones)
         updateFacialRelight(newRelight, isFinished)
+    }
+
+    private fun updateFacialRelightZones(zones: List<EditOperation.FacialRelightZone>, isFinished: Boolean) {
+        val doc = _uiState.value.document ?: return
+        val currentRelights = doc.facialRelights
+        val targetRelight = currentRelights.firstOrNull() ?: EditOperation.FacialRelight(
+            zones = zones
+        )
+        val newRelight = targetRelight.copy(zones = zones)
+        updateFacialRelight(newRelight, isFinished)
+    }
+
+    private fun renderPreviewFast(doc: EditorDocument) {
+        val baseBmp = _uiState.value.originalBitmap ?: return
+        renderJob?.cancel()
+        renderJob = viewModelScope.launch {
+            val updatedPreview = renderPipeline.renderPreview(baseBmp, doc)
+            _uiState.update {
+                it.copy(previewBitmap = updatedPreview)
+            }
+        }
     }
 
     private fun updateLayerBlendMode(layerId: String, blendMode: LayerBlendMode) {

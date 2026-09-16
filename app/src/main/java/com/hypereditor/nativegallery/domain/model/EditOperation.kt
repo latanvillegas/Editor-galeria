@@ -181,6 +181,7 @@ sealed interface EditOperation : Parcelable {
     data class FacialRelight(
         val id: String = UUID.randomUUID().toString(),
         val zones: List<FacialRelightZone> = emptyList(),
+        val globalSmoothness: Float = 0.2f,
         val globalIntensity: Float = 1.0f,
         val globalOpacity: Float = 1.0f
     ) : EditOperation

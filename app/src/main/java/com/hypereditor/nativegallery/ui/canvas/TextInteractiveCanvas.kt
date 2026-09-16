@@ -96,7 +96,7 @@ fun TextInteractiveCanvas(
 
             for (textItem in textOverlays) {
                 val isSelected = (textItem.id == selectedTextId)
-                Key(textItem.id) {
+                key(textItem.id) {
                     InteractiveTextLayer(
                         textItem = textItem,
                         isSelected = isSelected,
@@ -321,7 +321,7 @@ private fun InteractiveTextLayer(
                 Icon(
                     Icons.Default.Close,
                     contentDescription = "Eliminar texto",
-                    tint = Color.WHITE,
+                    tint = Color.White,
                     modifier = Modifier.size(14.dp)
                 )
             }

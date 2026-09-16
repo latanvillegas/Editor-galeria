@@ -1,5 +1,18 @@
 # Known Issues (HyperEditor)
 
+## [2026-09-16] Error: Fallo de compilación Kotlin en TextInteractiveCanvas (Unresolved reference 'Key' y 'WHITE')
+Síntoma: El task `:app:compileDebugKotlin` en GitHub Actions falló con:
+1. `Unresolved reference 'Key'` en línea 99.
+2. `@Composable invocations can only happen from the context of a @Composable function` en línea 100.
+3. `Unresolved reference 'WHITE'` en línea 324.
+Causa raíz:
+1. En Jetpack Compose, el agrupador de clave de composición es la función composable con minúscula `key(...)` (de `androidx.compose.runtime.key`), pero se había escrito con mayúscula `Key(...)`, el cual fue interpretado como un tipo inexistente y no proporcionó el scope `@Composable` a su lambda hijo.
+2. En `androidx.compose.ui.graphics.Color`, la constante de color blanco se define como `Color.White` (PascalCase), mientras que se había escrito `Color.WHITE` (formato de `android.graphics.Color`).
+Solución aplicada:
+1. Se reemplazó `Key(textItem.id)` por `key(textItem.id)` en `TextInteractiveCanvas.kt`.
+2. Se corrigió `tint = Color.WHITE` por `tint = Color.White`.
+Prevención: Respetar las convenciones de nombres de Jetpack Compose: `key` en minúscula para control de recombinación y constantes de color de `androidx.compose.ui.graphics.Color` en PascalCase (`Color.White`, `Color.Black`, etc.).
+
 ## [2026-09-09 / 2026-09-16] Error: Bloqueo y timeout del contenedor al intentar compilar APK nativo con Gradle
 Síntoma: Intentos de ejecutar `./gradlew assembleDebug` dentro del contenedor web de AI Studio provocan bloqueos del daemon de Gradle, agotamiento de recursos y eventual reinicio del contenedor por `RPC::DEADLINE_EXCEEDED` o `There was an unexpected error`.
 Causa raíz: El contenedor de desarrollo en la nube está dimensionado y configurado específicamente para ejecutar el dev server web (Vite/Node.js en puerto 3000) y tareas de edición de código. Los procesos pesados de Gradle Daemon (JVM con compilación Kotlin/Dexing multihilo de Android) saturan la memoria y los límites de ejecución asíncrona del contenedor.

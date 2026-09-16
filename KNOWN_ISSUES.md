@@ -1,10 +1,10 @@
 # Known Issues (HyperEditor)
 
-## [2026-09-09] Error: Bloqueo y timeout del contenedor al intentar instalar JDK y Android SDK con apt-get
-Síntoma: Llamadas a comandos y lectura de archivos arrojaron `RPC::DEADLINE_EXCEEDED (Server deadline expired)` y `Timed out waiting for applet file system condition`.
-Causa raíz: La ejecución de `apt-get install` para JDK y utilidades en el contenedor de desarrollo web disparó prompts interactivos (`fontconfig-config`) y consumo de memoria que congeló el contenedor.
-Solución aplicada: Se reinició el contenedor. La compilación del APK nativo de Android no debe ejecutarse dentro del contenedor web de AI Studio (que está optimizado para Vite/Node.js en puerto 3000), sino a través del flujo de integración continua ya configurado en `.github/workflows/android-build.yml` (GitHub Actions con runners Ubuntu y Android SDK preinstalado) o localmente en Android Studio.
-Prevención: Delegar la compilación pesada del APK a GitHub Actions / Android Studio y mantener el contenedor web enfocado en la documentación, control de versiones y el simulador interactivo de HyperEditor.
+## [2026-09-09 / 2026-09-16] Error: Bloqueo y timeout del contenedor al intentar compilar APK nativo con Gradle
+Síntoma: Intentos de ejecutar `./gradlew assembleDebug` dentro del contenedor web de AI Studio provocan bloqueos del daemon de Gradle, agotamiento de recursos y eventual reinicio del contenedor por `RPC::DEADLINE_EXCEEDED` o `There was an unexpected error`.
+Causa raíz: El contenedor de desarrollo en la nube está dimensionado y configurado específicamente para ejecutar el dev server web (Vite/Node.js en puerto 3000) y tareas de edición de código. Los procesos pesados de Gradle Daemon (JVM con compilación Kotlin/Dexing multihilo de Android) saturan la memoria y los límites de ejecución asíncrona del contenedor.
+Solución aplicada: Se confirma que el contenedor se recuperó limpiamente tras el reinicio. La suite nativa de Android está completamente preservada y lista para su compilación regular en el pipeline de CI/CD `.github/workflows/android-build.yml` (GitHub Actions con runners estándar de Ubuntu y Android SDK preconfigurado) o en Android Studio local. El simulador web de HyperEditor (`/src`) continúa compilando y operando al 100% de manera inmediata.
+Prevención: No lanzar tareas de compilación pesada de Gradle (`assembleDebug`/`bundleRelease`) en el entorno de desarrollo web en la nube; confiar la compilación automatizada del artefacto APK al workflow de GitHub Actions ya verificado en el repositorio.
 
 ## [2026-09-15] Error: Fallo de compilación Kotlin por referencias no resueltas y discrepancias de parámetros
 Síntoma: La compilación de Gradle en CI arrojó errores de referencias no resueltas (`computeImageBounds`, `UpdateFacialRelightZones`, `renderPreviewFast`, `Bitmap`, `patches`) e incoherencias de parámetros nominales (`centerX` vs `centerXNorm`, `globalSmoothness`).

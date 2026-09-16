@@ -37,3 +37,12 @@
   2. Renderizado híbrido en tiempo real: trazo activo dibujado directamente en el canvas acelerado por hardware de Compose mientras se arrastra el dedo; al levantar el dedo se emite una única intención `EditorIntent.AddBrushStroke` que muta inmutablemente `document.brushStrokes` para el pipeline no destructivo.
   3. Escalado proporcional de grosor (`minDim / 1000f`): el grosor del trazo se calcula relativo a la dimensión mínima de la imagen tanto en la visualización en pantalla como en `BrushDrawRenderStage`, garantizando que el trazo se vea idéntico en pantalla, en previsualización y en exportaciones de alta resolución (JPEG/PNG).
 
+## [2026-09-16] Regla de Arquitectura Permanente: Sin Publicidad, Sin Internet, Sin IA, Sin Telemetría y Cero Caché en Disco
+- **Contexto**: Blindaje de la integridad, privacidad y soberanía técnica del usuario en HyperEditor.
+- **Decisión**:
+  1. **Sin Publicidad ni Telemetría**: Prohibición y remoción explícita en manifiesto de `AD_ID`, Google/Firebase Analytics, Crashlytics y SDKs comerciales.
+  2. **Sin Internet (100% Offline)**: Remoción estricta con `tools:node="remove"` de permisos de red (`INTERNET`, `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE`). Ninguna herramienta o librería puede realizar llamadas externas.
+  3. **Sin Inteligencia Artificial**: Se prohíben modelos de red neuronal, TensorFlow Lite, ML Kit o servicios remotos de IA. Todo procesamiento es estrictamente determinista, algorítmico y manual.
+  4. **Sin Caché en Disco**: Todo el procesamiento gráfico activo, historial de deshacer/rehacer y composición de capas residen en memoria RAM. Cero uso de `cacheDir` o `externalCacheDir`. La única escritura en disco es la exportación final directa al `MediaStore` del usuario.
+  5. **Protección de Funciones Existentes**: Toda modificación requiere validación estricta de no-regresión sobre las 17 funciones operativas de la aplicación.
+

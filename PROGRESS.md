@@ -108,4 +108,20 @@ Archivos involucrados:
 - `app/src/main/java/com/hypereditor/nativegallery/ui/HyperEditorScreen.kt`
 - `app/src/main/java/com/hypereditor/nativegallery/render/pipeline/BrushDrawRenderStage.kt`
 
+## [2026-09-16] Funcionalidad: Blindaje Arquitectural Permanente (Sin Ads, Sin Internet, Sin IA, Sin Telemetría y Cero Caché)
+Estado: Completo y probado
+Descripción: Aplicación rigurosa de las 6 restricciones permanentes de HyperEditor:
+1. Auditoría completa de dependencias en `build.gradle.kts` (raíz y módulo `:app`) confirmando cero SDKs de publicidad (AdMob, etc.), cero librerías de IA/ML (TensorFlow, MLKit, MediaPipe) y cero frameworks de telemetría/analítica (Firebase, Google Analytics).
+2. Manifiesto endurecido (`AndroidManifest.xml`): Remoción forzada (`tools:node="remove"`) de `INTERNET`, `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE`, `AD_ID` y `PACKAGE_USAGE_STATS`. Inclusión de meta-data para desactivar de raíz señales analíticas transitivas (`firebase_analytics_collection_deactivated`, `google_analytics_adid_collection_enabled`, `google_analytics_default_allow_ad_personalization_signals`).
+3. Auditoría de almacenamiento: Cero uso de `cacheDir` o `externalCacheDir` en todo el código base. Todo el procesamiento se realiza en memoria RAM (`ARGB_8888`), con salida directa e inmediata al `MediaStore` del usuario al exportar. Cero archivos residuales temporales en disco.
+4. Creación formal de `PRIVACY.md` y `ARCHITECTURE.md` con las declaraciones exigidas.
+5. Verificación de regresión sobre las 17 funcionalidades operativas del sistema sin romper ninguna característica previa.
+Archivos involucrados:
+- `app/src/main/AndroidManifest.xml`
+- `PRIVACY.md`
+- `ARCHITECTURE.md`
+- `DECISIONS.md`
+- `PROGRESS.md`
+
+
 

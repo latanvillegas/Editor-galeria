@@ -83,8 +83,9 @@ class MasksRenderStage : RenderStage {
             }
         }
 
-        // 3. Invertir máscara si se solicitó
-        val finalMaskBmp = if (mask.isInverted) {
+        // 3. Invertir máscara si se solicitó o si el modo de selección es SUBTRACT (quitar)
+        val shouldInvert = mask.isInverted xor (mask.selectionMode == com.hypereditor.nativegallery.domain.model.SelectionMode.SUBTRACT)
+        val finalMaskBmp = if (shouldInvert) {
             invertAlphaBitmap(maskAlphaBmp)
         } else {
             maskAlphaBmp

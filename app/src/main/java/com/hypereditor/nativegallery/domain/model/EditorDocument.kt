@@ -16,5 +16,9 @@ data class EditorDocument(
     val masks: List<MaskModel> = emptyList(),
     val brushStrokes: List<EditOperation.BrushDraw> = emptyList(),
     val textOverlays: List<EditOperation.TextOverlay> = emptyList(),
-    val cloneStamps: List<EditOperation.CloneStampPoint> = emptyList()
+    val cloneStamps: List<EditOperation.CloneStampPoint> = emptyList(),
+    val healingStrokes: List<EditOperation.HealingStroke> = emptyList(),
+    val patchOperations: List<EditOperation.PatchOperation> = emptyList(),
+    val portraitLights: List<EditOperation.PortraitLight> = emptyList(),
+    val facialRelights: List<EditOperation.FacialRelight> = emptyList()
 ) : Parcelable

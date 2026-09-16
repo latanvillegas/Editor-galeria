@@ -1,5 +1,12 @@
 package com.hypereditor.nativegallery.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
+import android.graphics.ImageDecoder
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -27,9 +34,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hypereditor.nativegallery.domain.model.*
 import com.hypereditor.nativegallery.ui.canvas.CropInteractiveCanvas
+import com.hypereditor.nativegallery.ui.canvas.CustomCropInteractiveCanvas
 import com.hypereditor.nativegallery.ui.canvas.EditorCanvas
 import com.hypereditor.nativegallery.ui.canvas.rememberCanvasViewportState
 import com.hypereditor.nativegallery.ui.canvas.rememberCropUiState
+import com.hypereditor.nativegallery.ui.canvas.rememberCustomCropState
 import com.hypereditor.nativegallery.ui.state.EditorIntent
 import com.hypereditor.nativegallery.ui.state.EditorSectionTab
 import com.hypereditor.nativegallery.ui.state.EditorUiState
@@ -64,12 +73,112 @@ fun HyperEditorScreen(
 ) {
     val viewportState = rememberCanvasViewportState()
     val cropUiState = rememberCropUiState(state.document?.cropTransform ?: EditOperation.CropTransform())
+    var isCustomCropActive by remember { mutableStateOf(false) }
+    val customCropState = rememberCustomCropState(state.document?.cropTransform)
     var showHistoryDialog by remember { mutableStateOf(false) }
     var showSavePresetDialog by remember { mutableStateOf(false) }
     var newPresetName by remember { mutableStateOf("") }
     var showAddTextLayerDialog by remember { mutableStateOf(false) }
     var newTextLayerContent by remember { mutableStateOf("Texto de Capa") }
     var showAddStickerDialog by remember { mutableStateOf(false) }
+
+    // Retoque / Tampón de clonar táctil state
+    var selectedCreativeTool by remember { mutableIntStateOf(0) } // 0: Pincel, 1: Texto, 2: Clone Stamp, 3: Healing
+    var cloneMode by remember { mutableStateOf(com.hypereditor.nativegallery.ui.canvas.CloneMode.SELECT_ORIGIN) }
+    var cloneOriginNorm by remember { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
+    var cloneRadius by remember { mutableFloatStateOf(45f) }
+    var cloneHardness by remember { mutableFloatStateOf(0.5f) }
+    var cloneOpacity by remember { mutableFloatStateOf(1.0f) }
+    var cloneFlow by remember { mutableFloatStateOf(1.0f) }
+
+    // Healing / Pincel Corrector state
+    var healingToolMode by remember { mutableStateOf(com.hypereditor.nativegallery.ui.canvas.HealingToolMode.TAP) }
+    var healingSamplingMode by remember { mutableStateOf(com.hypereditor.nativegallery.ui.canvas.HealingSamplingMode.AUTO) }
+    var healingManualSource by remember { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
+    var healingRadius by remember { mutableFloatStateOf(32f) }
+    var healingFeather by remember { mutableFloatStateOf(0.5f) }
+    var healingStrength by remember { mutableFloatStateOf(1.0f) }
+
+    // Parche / Patch Tool state
+    var patchRadius by remember { mutableFloatStateOf(45f) }
+    var patchFeather by remember { mutableFloatStateOf(0.5f) }
+    var patchStrength by remember { mutableFloatStateOf(1.0f) }
+
+    // Portrait Light / Luz de Retrato state
+    var portraitLightExposure by remember { mutableFloatStateOf(0.35f) }
+    var portraitLightShadows by remember { mutableFloatStateOf(0.2f) }
+    var portraitLightHighlights by remember { mutableFloatStateOf(0.15f) }
+    var portraitLightTemperature by remember { mutableFloatStateOf(0.05f) }
+    var portraitLightFeather by remember { mutableFloatStateOf(0.6f) }
+    var portraitLightOpacity by remember { mutableFloatStateOf(1.0f) }
+    var portraitLightInvert by remember { mutableStateOf(false) }
+    var activePortraitLight by remember {
+        mutableStateOf(
+            state.document?.portraitLights?.firstOrNull() ?: EditOperation.PortraitLight(
+                exposure = 0.35f,
+                shadows = 0.2f,
+                highlights = 0.15f,
+                temperature = 0.05f,
+                feather = 0.6f,
+                opacity = 1.0f
+            )
+        )
+    }
+
+    // Facial Relight / Reiluminación Facial state
+    var selectedFacialZoneType by remember { mutableStateOf(EditOperation.FacialZoneType.FOREHEAD) }
+    val defaultFacialZones = remember {
+        listOf(
+            EditOperation.FacialRelightZone(EditOperation.FacialZoneType.FOREHEAD, 0.5f, 0.28f, 0.22f, 0.12f, exposure = 0.25f),
+            EditOperation.FacialRelightZone(EditOperation.FacialZoneType.LEFT_CHEEK, 0.35f, 0.45f, 0.14f, 0.14f, exposure = 0.15f),
+            EditOperation.FacialRelightZone(EditOperation.FacialZoneType.RIGHT_CHEEK, 0.65f, 0.45f, 0.14f, 0.14f, exposure = 0.15f),
+            EditOperation.FacialRelightZone(EditOperation.FacialZoneType.NOSE, 0.5f, 0.46f, 0.08f, 0.16f, exposure = 0.3f),
+            EditOperation.FacialRelightZone(EditOperation.FacialZoneType.CHIN, 0.5f, 0.68f, 0.12f, 0.10f, exposure = 0.2f),
+            EditOperation.FacialRelightZone(EditOperation.FacialZoneType.JAWLINE, 0.5f, 0.76f, 0.28f, 0.12f, exposure = -0.1f)
+        )
+    }
+    var facialZones by remember {
+        mutableStateOf(
+            state.document?.facialRelights?.firstOrNull()?.zones?.takeIf { it.isNotEmpty() } ?: defaultFacialZones
+        )
+    }
+    var facialGlobalSmoothness by remember { mutableFloatStateOf(0.2f) }
+    var facialGlobalIntensity by remember { mutableFloatStateOf(1.0f) }
+
+    // Mask & Selection Interactive Canvas state
+    var maskBrushSizeNorm by remember { mutableFloatStateOf(0.05f) }
+    var maskBrushIsEraser by remember { mutableStateOf(false) }
+
+    // Double Exposure Picker
+    val context = LocalContext.current
+    val doubleExposurePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            try {
+                val bmp = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, it)) { decoder, _, _ ->
+                        decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+                        decoder.isMutableRequired = true
+                    }
+                } else {
+                    @Suppress("DEPRECATION")
+                    MediaStore.Images.Media.getBitmap(context.contentResolver, it)
+                }
+                val layersCount = (state.document?.layers?.size ?: 0) + 1
+                onIntent(
+                    EditorIntent.AddDoubleExposureLayer(
+                        bitmap = bmp,
+                        name = "Doble Exposición $layersCount",
+                        blendMode = LayerBlendMode.SCREEN,
+                        opacity = 0.75f
+                    )
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
 
     LaunchedEffect(state.document?.cropTransform) {
         val currentTransform = state.document?.cropTransform ?: return@LaunchedEffect
@@ -578,14 +687,166 @@ fun HyperEditorScreen(
                 state.previewBitmap ?: state.originalBitmap
             }
 
-            // Viewport Canvas Area (Switches to Pro Interactive Crop in GEOMETRY_CROP tab)
+            // Viewport Canvas Area (Switches to Pro Interactive Crop / Custom Crop in GEOMETRY_CROP tab or CloneStamp in CREATIVE_TOOLS tab)
             if (state.selectedTab == EditorSectionTab.GEOMETRY_CROP) {
-                CropInteractiveCanvas(
-                    bitmap = state.originalBitmap,
-                    cropState = cropUiState,
-                    onCropTransformChanged = { onIntent(EditorIntent.UpdateCropTransform(it)) },
-                    onInteractionStart = { onIntent(EditorIntent.BeginCropInteraction) },
-                    onInteractionEnd = { onIntent(EditorIntent.CommitCropTransform("Recorte interactivo")) },
+                if (isCustomCropActive) {
+                    val currentCrop = state.document?.cropTransform ?: EditOperation.CropTransform()
+                    val totalRot = currentCrop.rotation90Degrees * 90f + currentCrop.fineStraightenAngle
+                    CustomCropInteractiveCanvas(
+                        bitmap = state.originalBitmap,
+                        rotation = totalRot,
+                        flipHorizontal = currentCrop.flipHorizontal,
+                        flipVertical = currentCrop.flipVertical,
+                        cropState = customCropState,
+                        onApply = { leftNorm, topNorm, rightNorm, bottomNorm ->
+                            onIntent(EditorIntent.ApplyCustomFreeCrop(leftNorm, topNorm, rightNorm, bottomNorm))
+                            isCustomCropActive = false
+                        },
+                        onCancel = {
+                            val cur = state.document?.cropTransform ?: EditOperation.CropTransform()
+                            customCropState.syncFrom(cur)
+                            isCustomCropActive = false
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                    )
+                } else {
+                    CropInteractiveCanvas(
+                        bitmap = state.originalBitmap,
+                        cropState = cropUiState,
+                        onCropTransformChanged = { onIntent(EditorIntent.UpdateCropTransform(it)) },
+                        onInteractionStart = { onIntent(EditorIntent.BeginCropInteraction) },
+                        onInteractionEnd = { onIntent(EditorIntent.CommitCropTransform("Recorte interactivo")) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                    )
+                }
+            } else if (state.selectedTab == EditorSectionTab.CREATIVE_TOOLS && selectedCreativeTool == 2) {
+                com.hypereditor.nativegallery.ui.canvas.CloneStampInteractiveCanvas(
+                    bitmap = bitmapToDisplay,
+                    cloneMode = cloneMode,
+                    onCloneModeChanged = { cloneMode = it },
+                    originNorm = cloneOriginNorm,
+                    onOriginSelected = { cloneOriginNorm = it },
+                    stampRadius = cloneRadius,
+                    stampHardness = cloneHardness,
+                    stampOpacity = cloneOpacity,
+                    stampFlow = cloneFlow,
+                    onApplyStamps = { stamps ->
+                        onIntent(EditorIntent.AddCloneStampBatch(stamps))
+                    },
+                    onClearStamps = {
+                        onIntent(EditorIntent.ClearCloneStamps)
+                    },
+                    stampsCount = state.document?.cloneStamps?.size ?: 0,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                )
+            } else if (state.selectedTab == EditorSectionTab.CREATIVE_TOOLS && selectedCreativeTool == 3) {
+                com.hypereditor.nativegallery.ui.canvas.HealingInteractiveCanvas(
+                    bitmap = bitmapToDisplay,
+                    toolMode = healingToolMode,
+                    samplingMode = healingSamplingMode,
+                    onToolModeChanged = { healingToolMode = it },
+                    onSamplingModeChanged = { healingSamplingMode = it },
+                    radius = healingRadius,
+                    feather = healingFeather,
+                    strength = healingStrength,
+                    manualSourceNorm = healingManualSource,
+                    onManualSourceSelected = { healingManualSource = it },
+                    onApplyStroke = { stroke ->
+                        onIntent(EditorIntent.AddHealingStroke(stroke))
+                    },
+                    strokesCount = state.document?.healingStrokes?.size ?: 0,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                )
+            } else if (state.selectedTab == EditorSectionTab.CREATIVE_TOOLS && selectedCreativeTool == 4) {
+                com.hypereditor.nativegallery.ui.canvas.PatchInteractiveCanvas(
+                    bitmap = bitmapToDisplay,
+                    radius = patchRadius,
+                    feather = patchFeather,
+                    strength = patchStrength,
+                    onApplyPatch = { patch ->
+                        onIntent(EditorIntent.AddPatchOperation(patch))
+                    },
+                    patchesCount = state.document?.patches?.size ?: 0,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                )
+            } else if (state.selectedTab == EditorSectionTab.CREATIVE_TOOLS && selectedCreativeTool == 5) {
+                com.hypereditor.nativegallery.ui.canvas.PortraitLightInteractiveCanvas(
+                    bitmap = bitmapToDisplay,
+                    portraitLight = activePortraitLight,
+                    onLightChanged = { newLight ->
+                        activePortraitLight = newLight
+                        portraitLightExposure = newLight.exposure
+                        portraitLightShadows = newLight.shadows
+                        portraitLightHighlights = newLight.highlights
+                        portraitLightTemperature = newLight.temperature
+                        portraitLightFeather = newLight.feather
+                        portraitLightOpacity = newLight.opacity
+                        portraitLightInvert = newLight.isInverted
+                        onIntent(EditorIntent.UpdatePortraitLight(newLight))
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                )
+            } else if (state.selectedTab == EditorSectionTab.CREATIVE_TOOLS && selectedCreativeTool == 6) {
+                com.hypereditor.nativegallery.ui.canvas.FacialRelightInteractiveCanvas(
+                    bitmap = bitmapToDisplay,
+                    zones = facialZones,
+                    selectedZoneType = selectedFacialZoneType,
+                    onZoneSelected = { selectedFacialZoneType = it },
+                    onZoneChanged = { updatedZone ->
+                        val newZones = facialZones.map { if (it.zoneType == updatedZone.zoneType) updatedZone else it }
+                        facialZones = newZones
+                        onIntent(EditorIntent.UpdateFacialRelightZones(newZones))
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                )
+            } else if (state.selectedTab == EditorSectionTab.MASKS_SELECTIONS) {
+                val masks = state.document?.masks ?: emptyList()
+                val currentActiveMask = masks.find { it.id == state.activeMaskId } ?: masks.firstOrNull()
+                com.hypereditor.nativegallery.ui.canvas.MaskSelectionInteractiveCanvas(
+                    bitmap = bitmapToDisplay,
+                    activeMask = currentActiveMask,
+                    onUpdateRectBounds = { bounds ->
+                        currentActiveMask?.let { onIntent(EditorIntent.UpdateMaskRectBounds(it.id, bounds)) }
+                    },
+                    onUpdateEllipseBounds = { bounds ->
+                        currentActiveMask?.let { onIntent(EditorIntent.UpdateMaskEllipseBounds(it.id, bounds)) }
+                    },
+                    onUpdateLassoPoints = { points ->
+                        currentActiveMask?.let { onIntent(EditorIntent.UpdateMaskLassoPoints(it.id, points)) }
+                    },
+                    onAddBrushStroke = { stroke ->
+                        currentActiveMask?.let { onIntent(EditorIntent.AddMaskBrushStroke(it.id, stroke)) }
+                    },
+                    onClearSelection = {
+                        currentActiveMask?.let { onIntent(EditorIntent.ClearMask(it.id)) }
+                    },
+                    onToggleSelectionMode = {
+                        currentActiveMask?.let {
+                            val newMode = if (it.selectionMode == com.hypereditor.nativegallery.domain.model.SelectionMode.ADD) {
+                                com.hypereditor.nativegallery.domain.model.SelectionMode.SUBTRACT
+                            } else {
+                                com.hypereditor.nativegallery.domain.model.SelectionMode.ADD
+                            }
+                            onIntent(EditorIntent.UpdateMaskSelectionMode(it.id, newMode))
+                        }
+                    },
+                    brushSizeNorm = maskBrushSizeNorm,
+                    isEraserMode = maskBrushIsEraser,
+                    onToggleEraserMode = { maskBrushIsEraser = !maskBrushIsEraser },
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
@@ -955,8 +1216,16 @@ fun HyperEditorScreen(
                                         masks.forEach { mask ->
                                             MaskCard(
                                                 mask = mask,
+                                                isSelected = (mask.id == state.activeMaskId) || (state.activeMaskId == null && mask == masks.firstOrNull()),
+                                                onSelect = { onIntent(EditorIntent.SelectActiveMask(mask.id)) },
                                                 onToggleEnabled = { onIntent(EditorIntent.ToggleMaskEnabled(mask.id)) },
                                                 onToggleInvert = { onIntent(EditorIntent.ToggleMaskInvert(mask.id)) },
+                                                onToggleMode = {
+                                                    val newMode = if (mask.selectionMode == SelectionMode.ADD) SelectionMode.SUBTRACT else SelectionMode.ADD
+                                                    onIntent(EditorIntent.UpdateMaskSelectionMode(mask.id, newMode))
+                                                },
+                                                onSelectionTypeChange = { onIntent(EditorIntent.UpdateMaskSelectionType(mask.id, it)) },
+                                                onClearSelection = { onIntent(EditorIntent.ClearMask(mask.id)) },
                                                 onFeatherChange = { onIntent(EditorIntent.UpdateMaskFeather(mask.id, it)) },
                                                 onAdjustmentsChange = { onIntent(EditorIntent.UpdateMaskLocalAdjustments(mask.id, it)) },
                                                 onDelete = { onIntent(EditorIntent.DeleteMask(mask.id)) }
@@ -967,7 +1236,6 @@ fun HyperEditorScreen(
                             }
 
                             EditorSectionTab.CREATIVE_TOOLS -> {
-                                var selectedCreativeTool by remember { mutableStateOf(0) } // 0: Pincel, 1: Texto, 2: Clone Stamp
                                 var brushSize by remember { mutableFloatStateOf(24f) }
                                 var brushColor by remember { mutableIntStateOf(android.graphics.Color.YELLOW) }
                                 var brushOpacity by remember { mutableFloatStateOf(1.0f) }
@@ -977,23 +1245,40 @@ fun HyperEditorScreen(
                                 var textSize by remember { mutableFloatStateOf(44f) }
                                 var textFont by remember { mutableStateOf("SANS_SERIF") }
 
-                                var stampRadius by remember { mutableFloatStateOf(45f) }
-
                                 Text(text = "Herramientas Creativas y Retoque", color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp)
 
                                 // Selector de sub-herramienta
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    CreativeTabChip("Pincel", Icons.Default.Brush, selectedCreativeTool == 0, modifier = Modifier.weight(1f)) {
-                                        selectedCreativeTool = 0
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        CreativeTabChip("Pincel", Icons.Default.Brush, selectedCreativeTool == 0, modifier = Modifier.weight(1f)) {
+                                            selectedCreativeTool = 0
+                                        }
+                                        CreativeTabChip("Texto", Icons.Default.TextFields, selectedCreativeTool == 1, modifier = Modifier.weight(1f)) {
+                                            selectedCreativeTool = 1
+                                        }
+                                        CreativeTabChip("Clonar", Icons.Default.AutoFixHigh, selectedCreativeTool == 2, modifier = Modifier.weight(1f)) {
+                                            selectedCreativeTool = 2
+                                        }
+                                        CreativeTabChip("Corrector", Icons.Default.Healing, selectedCreativeTool == 3, modifier = Modifier.weight(1f)) {
+                                            selectedCreativeTool = 3
+                                        }
                                     }
-                                    CreativeTabChip("Texto", Icons.Default.TextFields, selectedCreativeTool == 1, modifier = Modifier.weight(1f)) {
-                                        selectedCreativeTool = 1
-                                    }
-                                    CreativeTabChip("Clonar", Icons.Default.AutoFixHigh, selectedCreativeTool == 2, modifier = Modifier.weight(1f)) {
-                                        selectedCreativeTool = 2
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        CreativeTabChip("Parche", Icons.Default.CropPortrait, selectedCreativeTool == 4, modifier = Modifier.weight(1f)) {
+                                            selectedCreativeTool = 4
+                                        }
+                                        CreativeTabChip("Luz Retrato", Icons.Default.WbIncandescent, selectedCreativeTool == 5, modifier = Modifier.weight(1f)) {
+                                            selectedCreativeTool = 5
+                                        }
+                                        CreativeTabChip("Reiluminar", Icons.Default.Face, selectedCreativeTool == 6, modifier = Modifier.weight(1f)) {
+                                            selectedCreativeTool = 6
+                                        }
                                     }
                                 }
 
@@ -1192,46 +1477,575 @@ fun HyperEditorScreen(
                                     }
 
                                     2 -> {
-                                        // Clone Stamp (Tampón de Clonar)
+                                        // Retoque manual y táctil: Tampón de Clonar
                                         Text(
-                                            text = "Tampón de Clonar:",
+                                            text = "Tampón de Clonar (Retoque Táctil)",
                                             color = MaterialTheme.colorScheme.onSurface,
-                                            fontSize = 14.sp
-                                        )
-                                        Text(
-                                            text = "Muestrea un área de origen y la estampa en el destino con bordes suavizados.",
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            fontSize = 11.sp
+                                            fontSize = 15.sp,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
                                         )
 
-                                        AdjustmentSlider("Radio del Parche", stampRadius, 15f, 120f, 45f, "px") {
-                                            stampRadius = it
-                                        }
-
-                                        Button(
-                                            onClick = {
-                                                // Crear clonación de muestra
-                                                val srcX = 0.3f
-                                                val srcY = 0.4f
-                                                val dstX = 0.65f
-                                                val dstY = 0.55f
-                                                onIntent(EditorIntent.AddCloneStamp(srcX, srcY, dstX, dstY, stampRadius))
-                                            },
+                                        // 1. Selector de los dos modos claramente visibles
+                                        Row(
                                             modifier = Modifier.fillMaxWidth(),
-                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                                         ) {
-                                            Icon(Icons.Default.ContentPaste, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(16.dp))
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Text("Aplicar Parche Clonado", color = MaterialTheme.colorScheme.onPrimary, fontSize = 12.sp)
+                                            Button(
+                                                onClick = { cloneMode = com.hypereditor.nativegallery.ui.canvas.CloneMode.SELECT_ORIGIN },
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = if (cloneMode == com.hypereditor.nativegallery.ui.canvas.CloneMode.SELECT_ORIGIN)
+                                                        Color(0xFF00E5FF) else MaterialTheme.colorScheme.surfaceVariant,
+                                                    contentColor = if (cloneMode == com.hypereditor.nativegallery.ui.canvas.CloneMode.SELECT_ORIGIN)
+                                                        Color.Black else MaterialTheme.colorScheme.onSurface
+                                                ),
+                                                modifier = Modifier.weight(1f),
+                                                contentPadding = PaddingValues(vertical = 10.dp)
+                                            ) {
+                                                Icon(Icons.Default.FilterTiltShift, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text("Elegir origen", fontSize = 12.sp)
+                                            }
+
+                                            Button(
+                                                onClick = { cloneMode = com.hypereditor.nativegallery.ui.canvas.CloneMode.PAINT },
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = if (cloneMode == com.hypereditor.nativegallery.ui.canvas.CloneMode.PAINT)
+                                                        Color(0xFFFF9100) else MaterialTheme.colorScheme.surfaceVariant,
+                                                    contentColor = if (cloneMode == com.hypereditor.nativegallery.ui.canvas.CloneMode.PAINT)
+                                                        Color.Black else MaterialTheme.colorScheme.onSurface
+                                                ),
+                                                modifier = Modifier.weight(1f),
+                                                contentPadding = PaddingValues(vertical = 10.dp)
+                                            ) {
+                                                Icon(Icons.Default.Brush, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text("Clonar/Pintar", fontSize = 12.sp)
+                                            }
                                         }
 
-                                        if ((state.document?.cloneStamps?.size ?: 0) > 0) {
-                                            TextButton(
+                                        // 2. Indicador textual del estado actual
+                                        val statusDesc = when {
+                                            cloneMode == com.hypereditor.nativegallery.ui.canvas.CloneMode.SELECT_ORIGIN && cloneOriginNorm == null ->
+                                                "Toca la imagen para fijar el origen"
+                                            cloneMode == com.hypereditor.nativegallery.ui.canvas.CloneMode.SELECT_ORIGIN && cloneOriginNorm != null ->
+                                                "Origen seleccionado. Cambia a Clonar para pintar."
+                                            cloneMode == com.hypereditor.nativegallery.ui.canvas.CloneMode.PAINT && cloneOriginNorm == null ->
+                                                "Primero selecciona un origen"
+                                            cloneMode == com.hypereditor.nativegallery.ui.canvas.CloneMode.PAINT && cloneOriginNorm != null ->
+                                                "Arrastra para clonar desde el origen"
+                                            else -> "Toca la imagen para fijar el origen"
+                                        }
+
+                                        val statusColor = when {
+                                            cloneMode == com.hypereditor.nativegallery.ui.canvas.CloneMode.PAINT && cloneOriginNorm == null ->
+                                                Color(0xFFFF5252)
+                                            cloneOriginNorm != null ->
+                                                Color(0xFF00E5FF)
+                                            else ->
+                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                        }
+
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                            border = androidx.compose.foundation.BorderStroke(1.dp, statusColor.copy(alpha = 0.6f)),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(12.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = if (cloneMode == com.hypereditor.nativegallery.ui.canvas.CloneMode.PAINT && cloneOriginNorm == null)
+                                                        Icons.Default.Warning else Icons.Default.Info,
+                                                    contentDescription = null,
+                                                    tint = statusColor,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                                Column {
+                                                    Text(
+                                                        text = "Estado:",
+                                                        fontSize = 11.sp,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                    Text(
+                                                        text = statusDesc,
+                                                        fontSize = 13.sp,
+                                                        color = statusColor,
+                                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+                                                    )
+                                                    if (cloneOriginNorm != null) {
+                                                        Text(
+                                                            text = "Origen fijado en (${(cloneOriginNorm!!.x * 100).toInt()}%, ${(cloneOriginNorm!!.y * 100).toInt()}%)",
+                                                            fontSize = 11.sp,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        // 3. Botones rápidos para cambiar origen o pasar a clonar
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            OutlinedButton(
+                                                onClick = { cloneMode = com.hypereditor.nativegallery.ui.canvas.CloneMode.SELECT_ORIGIN },
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                Icon(Icons.Default.MyLocation, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text("Cambiar origen", fontSize = 11.sp)
+                                            }
+
+                                            OutlinedButton(
+                                                onClick = { cloneMode = com.hypereditor.nativegallery.ui.canvas.CloneMode.PAINT },
+                                                enabled = cloneOriginNorm != null,
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                Icon(Icons.Default.Gesture, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text("Pasar a Clonar", fontSize = 11.sp)
+                                            }
+                                        }
+
+                                        // 4. Sliders profesionales de control estilo Photoshop
+                                        AdjustmentSlider("Tamaño / Radio", cloneRadius, 15f, 180f, 45f, "px") {
+                                            cloneRadius = it
+                                        }
+
+                                        AdjustmentSlider("Dureza", cloneHardness * 100f, 5f, 100f, 50f, "%") {
+                                            cloneHardness = it / 100f
+                                        }
+
+                                        AdjustmentSlider("Opacidad", cloneOpacity * 100f, 10f, 100f, 100f, "%") {
+                                            cloneOpacity = it / 100f
+                                        }
+
+                                        AdjustmentSlider("Flujo", cloneFlow * 100f, 10f, 100f, 100f, "%") {
+                                            cloneFlow = it / 100f
+                                        }
+
+                                        // 5. Integración con Capas existentes
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(8.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                Icon(Icons.Default.Layers, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                                                Text(
+                                                    text = "Integrado con el Pipeline: Los parches se procesan en ARGB_8888 y se integran automáticamente debajo de las capas activas (${state.document?.layers?.size ?: 0} capas).",
+                                                    fontSize = 11.sp,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+
+                                        // 6. Botón para limpiar retoques
+                                        val totalStamps = state.document?.cloneStamps?.size ?: 0
+                                        if (totalStamps > 0) {
+                                            OutlinedButton(
                                                 onClick = { onIntent(EditorIntent.ClearCloneStamps) },
+                                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF6B6B)),
                                                 modifier = Modifier.fillMaxWidth()
                                             ) {
-                                                Text("Limpiar Parches Clonados", color = Color(0xFFFF6B6B), fontSize = 12.sp)
+                                                Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = Color(0xFFFF6B6B), modifier = Modifier.size(16.dp))
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text("Limpiar Retoques ($totalStamps parches)", color = Color(0xFFFF6B6B), fontSize = 12.sp)
                                             }
+                                        }
+                                    }
+
+                                    3 -> {
+                                        // Pincel Corrector / Healing (Spot Healing & Healing Brush)
+                                        Text(
+                                            text = "Pincel Corrector (Healing)",
+                                            fontSize = 13.sp,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+
+                                        Text(
+                                            text = "Elimina imperfecciones, polvo, manchas o cables mezclando la textura circundante con el color e iluminación del destino.",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+
+                                        // 1. Selector de Modo: Toque vs Pincel
+                                        Text(text = "Modo de Aplicación:", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            FilterChip(
+                                                selected = healingToolMode == com.hypereditor.nativegallery.ui.canvas.HealingToolMode.TAP,
+                                                onClick = { healingToolMode = com.hypereditor.nativegallery.ui.canvas.HealingToolMode.TAP },
+                                                label = { Text("Toque (Puntual)", fontSize = 11.sp) },
+                                                leadingIcon = { Icon(Icons.Default.TouchApp, contentDescription = null, modifier = Modifier.size(14.dp)) },
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            FilterChip(
+                                                selected = healingToolMode == com.hypereditor.nativegallery.ui.canvas.HealingToolMode.BRUSH,
+                                                onClick = { healingToolMode = com.hypereditor.nativegallery.ui.canvas.HealingToolMode.BRUSH },
+                                                label = { Text("Pincel (Trazo)", fontSize = 11.sp) },
+                                                leadingIcon = { Icon(Icons.Default.Gesture, contentDescription = null, modifier = Modifier.size(14.dp)) },
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                        }
+
+                                        // 2. Selector de Muestreo: Automático vs Manual
+                                        Text(text = "Modo de Muestreo:", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            FilterChip(
+                                                selected = healingSamplingMode == com.hypereditor.nativegallery.ui.canvas.HealingSamplingMode.AUTO,
+                                                onClick = { healingSamplingMode = com.hypereditor.nativegallery.ui.canvas.HealingSamplingMode.AUTO },
+                                                label = { Text("Automático", fontSize = 11.sp) },
+                                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, contentDescription = null, modifier = Modifier.size(14.dp)) },
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            FilterChip(
+                                                selected = healingSamplingMode == com.hypereditor.nativegallery.ui.canvas.HealingSamplingMode.MANUAL,
+                                                onClick = { healingSamplingMode = com.hypereditor.nativegallery.ui.canvas.HealingSamplingMode.MANUAL },
+                                                label = { Text("Manual", fontSize = 11.sp) },
+                                                leadingIcon = { Icon(Icons.Default.Adjust, contentDescription = null, modifier = Modifier.size(14.dp)) },
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                        }
+
+                                        // 3. Sliders de control: Tamaño/Radio, Dureza/Feather, Fuerza
+                                        AdjustmentSlider("Tamaño del Pincel", healingRadius, 10f, 150f, 32f, "px") {
+                                            healingRadius = it
+                                        }
+
+                                        AdjustmentSlider("Difuminado / Feather", healingFeather * 100f, 10f, 100f, 50f, "%") {
+                                            healingFeather = it / 100f
+                                        }
+
+                                        AdjustmentSlider("Fuerza / Opacidad", healingStrength * 100f, 10f, 100f, 100f, "%") {
+                                            healingStrength = it / 100f
+                                        }
+
+                                        // 4. Badge informativo de integración con el pipeline
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(8.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                Icon(Icons.Default.Healing, contentDescription = null, tint = Color(0xFFFFB300), modifier = Modifier.size(16.dp))
+                                                Text(
+                                                    text = "Fusión de textura armónica: Transfiere el micro-detalle de la piel/superficie sin bordes duros. Cada trazo o toque añade 1 paso a Deshacer/Rehacer.",
+                                                    fontSize = 11.sp,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+
+                                        // 5. Botón para limpiar retoques de Healing
+                                        val totalHealing = state.document?.healingStrokes?.size ?: 0
+                                        if (totalHealing > 0) {
+                                            OutlinedButton(
+                                                onClick = { onIntent(EditorIntent.ClearHealingStrokes) },
+                                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF6B6B)),
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = Color(0xFFFF6B6B), modifier = Modifier.size(16.dp))
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text("Limpiar Correcciones ($totalHealing trazos)", color = Color(0xFFFF6B6B), fontSize = 12.sp)
+                                            }
+                                        }
+                                    }
+
+                                    4 -> {
+                                        // Parche / Patch Tool
+                                        Text(
+                                            text = "Herramienta Parche (Patch Tool)",
+                                            fontSize = 13.sp,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+
+                                        Text(
+                                            text = "Toca o selecciona una imperfección en el lienzo y arrástrala hacia una zona limpia para muestrear textura con bordes difuminados y tono parejo.",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+
+                                        AdjustmentSlider("Radio de Selección", patchRadius, 15f, 180f, 45f, "px") {
+                                            patchRadius = it
+                                        }
+
+                                        AdjustmentSlider("Difuminado de Borde (Feather)", patchFeather * 100f, 10f, 100f, 50f, "%") {
+                                            patchFeather = it / 100f
+                                        }
+
+                                        AdjustmentSlider("Fuerza de Fusión", patchStrength * 100f, 10f, 100f, 100f, "%") {
+                                            patchStrength = it / 100f
+                                        }
+
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(8.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                Icon(Icons.Default.CropPortrait, contentDescription = null, tint = Color(0xFF00E5FF), modifier = Modifier.size(16.dp))
+                                                Text(
+                                                    text = "Flujo de 2 pasos estilo Photoshop: 1) Selecciona el defecto, 2) Arrastra al origen donante. El algoritmo armoniza iluminación y grano.",
+                                                    fontSize = 11.sp,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+
+                                        val totalPatches = state.document?.patches?.size ?: 0
+                                        if (totalPatches > 0) {
+                                            OutlinedButton(
+                                                onClick = { onIntent(EditorIntent.ClearPatches) },
+                                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF6B6B)),
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = Color(0xFFFF6B6B), modifier = Modifier.size(16.dp))
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text("Limpiar Parches ($totalPatches aplicados)", color = Color(0xFFFF6B6B), fontSize = 12.sp)
+                                            }
+                                        }
+                                    }
+
+                                    5 -> {
+                                        // Luz de Retrato / Portrait Light
+                                        Text(
+                                            text = "Luz de Retrato Manual (Studio Relight)",
+                                            fontSize = 13.sp,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+
+                                        Text(
+                                            text = "Coloca y arrastra la fuente de luz sobre la imagen. Modela volumen, sombras y calidez emulando reflectores de estudio fotográfico.",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+
+                                        AdjustmentSlider("Exposición de Luz", portraitLightExposure, -1f, 1f, 0.35f) {
+                                            portraitLightExposure = it
+                                            val updated = activePortraitLight.copy(exposure = it)
+                                            activePortraitLight = updated
+                                            onIntent(EditorIntent.UpdatePortraitLight(updated))
+                                        }
+
+                                        AdjustmentSlider("Relleno de Sombras", portraitLightShadows, -1f, 1f, 0.2f) {
+                                            portraitLightShadows = it
+                                            val updated = activePortraitLight.copy(shadows = it)
+                                            activePortraitLight = updated
+                                            onIntent(EditorIntent.UpdatePortraitLight(updated))
+                                        }
+
+                                        AdjustmentSlider("Brillo / Altas Luces", portraitLightHighlights, -1f, 1f, 0.15f) {
+                                            portraitLightHighlights = it
+                                            val updated = activePortraitLight.copy(highlights = it)
+                                            activePortraitLight = updated
+                                            onIntent(EditorIntent.UpdatePortraitLight(updated))
+                                        }
+
+                                        AdjustmentSlider("Temperatura de Luz", portraitLightTemperature, -1f, 1f, 0.05f) {
+                                            portraitLightTemperature = it
+                                            val updated = activePortraitLight.copy(temperature = it)
+                                            activePortraitLight = updated
+                                            onIntent(EditorIntent.UpdatePortraitLight(updated))
+                                        }
+
+                                        AdjustmentSlider("Suavizado / Difusión", portraitLightFeather * 100f, 10f, 100f, 60f, "%") {
+                                            portraitLightFeather = it / 100f
+                                            val updated = activePortraitLight.copy(feather = it / 100f)
+                                            activePortraitLight = updated
+                                            onIntent(EditorIntent.UpdatePortraitLight(updated))
+                                        }
+
+                                        AdjustmentSlider("Opacidad de la Luz", portraitLightOpacity * 100f, 10f, 100f, 100f, "%") {
+                                            portraitLightOpacity = it / 100f
+                                            val updated = activePortraitLight.copy(opacity = it / 100f)
+                                            activePortraitLight = updated
+                                            onIntent(EditorIntent.UpdatePortraitLight(updated))
+                                        }
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text("Invertir Foco (Iluminar Fondo)", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
+                                            Switch(
+                                                checked = portraitLightInvert,
+                                                onCheckedChange = {
+                                                    portraitLightInvert = it
+                                                    val updated = activePortraitLight.copy(isInverted = it)
+                                                    activePortraitLight = updated
+                                                    onIntent(EditorIntent.UpdatePortraitLight(updated))
+                                                }
+                                            )
+                                        }
+
+                                        OutlinedButton(
+                                            onClick = {
+                                                val reset = EditOperation.PortraitLight(
+                                                    centerX = 0.5f,
+                                                    centerY = 0.45f,
+                                                    radiusX = 0.35f,
+                                                    radiusY = 0.45f,
+                                                    exposure = 0.35f,
+                                                    shadows = 0.2f,
+                                                    highlights = 0.15f,
+                                                    temperature = 0.05f,
+                                                    feather = 0.6f,
+                                                    opacity = 1.0f,
+                                                    isInverted = false
+                                                )
+                                                activePortraitLight = reset
+                                                portraitLightExposure = 0.35f
+                                                portraitLightShadows = 0.2f
+                                                portraitLightHighlights = 0.15f
+                                                portraitLightTemperature = 0.05f
+                                                portraitLightFeather = 0.6f
+                                                portraitLightOpacity = 1.0f
+                                                portraitLightInvert = false
+                                                onIntent(EditorIntent.UpdatePortraitLight(reset))
+                                            },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Icon(Icons.Default.RestartAlt, contentDescription = null, modifier = Modifier.size(16.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text("Centrar Fuente de Luz", fontSize = 12.sp)
+                                        }
+                                    }
+
+                                    6 -> {
+                                        // Reiluminación Facial / Facial Relight
+                                        Text(
+                                            text = "Reiluminación Facial por Zonas",
+                                            fontSize = 13.sp,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+
+                                        Text(
+                                            text = "Ajusta la luz individualmente sobre Frente, Pómulos, Nariz, Mentón o Mandíbula arrastrando los puntos anatómicos o mediante los controles:",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+
+                                        // Selector de Zonas Anatómicas
+                                        val zoneLabels = listOf(
+                                            Pair(EditOperation.FacialZoneType.FOREHEAD, "Frente"),
+                                            Pair(EditOperation.FacialZoneType.LEFT_CHEEK, "Pómulo Izq"),
+                                            Pair(EditOperation.FacialZoneType.RIGHT_CHEEK, "Pómulo Der"),
+                                            Pair(EditOperation.FacialZoneType.NOSE, "Nariz"),
+                                            Pair(EditOperation.FacialZoneType.CHIN, "Mentón"),
+                                            Pair(EditOperation.FacialZoneType.JAWLINE, "Mandíbula")
+                                        )
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            zoneLabels.take(3).forEach { (zt, name) ->
+                                                FilterChip(
+                                                    selected = selectedFacialZoneType == zt,
+                                                    onClick = { selectedFacialZoneType = zt },
+                                                    label = { Text(name, fontSize = 10.sp) },
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                            }
+                                        }
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            zoneLabels.drop(3).forEach { (zt, name) ->
+                                                FilterChip(
+                                                    selected = selectedFacialZoneType == zt,
+                                                    onClick = { selectedFacialZoneType = zt },
+                                                    label = { Text(name, fontSize = 10.sp) },
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                            }
+                                        }
+
+                                        val currentZone = facialZones.find { it.zoneType == selectedFacialZoneType }
+                                            ?: EditOperation.FacialRelightZone(selectedFacialZoneType, 0.5f, 0.5f, 0.15f, 0.15f)
+
+                                        AdjustmentSlider("Luz de Zona (Exposición)", currentZone.exposure, -1f, 1f, 0f) {
+                                            val updated = currentZone.copy(exposure = it)
+                                            val newZones = facialZones.map { z -> if (z.zoneType == currentZone.zoneType) updated else z }
+                                            facialZones = newZones
+                                            onIntent(EditorIntent.UpdateFacialRelightZones(newZones))
+                                        }
+
+                                        AdjustmentSlider("Tono / Temperatura", currentZone.temperature, -1f, 1f, 0f) {
+                                            val updated = currentZone.copy(temperature = it)
+                                            val newZones = facialZones.map { z -> if (z.zoneType == currentZone.zoneType) updated else z }
+                                            facialZones = newZones
+                                            onIntent(EditorIntent.UpdateFacialRelightZones(newZones))
+                                        }
+
+                                        AdjustmentSlider("Contorno / Sombras", currentZone.shadows, -1f, 1f, 0f) {
+                                            val updated = currentZone.copy(shadows = it)
+                                            val newZones = facialZones.map { z -> if (z.zoneType == currentZone.zoneType) updated else z }
+                                            facialZones = newZones
+                                            onIntent(EditorIntent.UpdateFacialRelightZones(newZones))
+                                        }
+
+                                        AdjustmentSlider("Suavizado de Zona", currentZone.smoothness * 100f, 0f, 100f, 20f, "%") {
+                                            val updated = currentZone.copy(smoothness = it / 100f)
+                                            val newZones = facialZones.map { z -> if (z.zoneType == currentZone.zoneType) updated else z }
+                                            facialZones = newZones
+                                            onIntent(EditorIntent.UpdateFacialRelightZones(newZones))
+                                        }
+
+                                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+
+                                        AdjustmentSlider("Suavizado Global Piel", facialGlobalSmoothness * 100f, 0f, 100f, 20f, "%") {
+                                            facialGlobalSmoothness = it / 100f
+                                            val currentRelight = state.document?.facialRelights?.firstOrNull() ?: EditOperation.FacialRelight(zones = facialZones)
+                                            val updated = currentRelight.copy(globalSmoothness = it / 100f, globalIntensity = facialGlobalIntensity)
+                                            onIntent(EditorIntent.UpdateFacialRelight(updated))
+                                        }
+
+                                        AdjustmentSlider("Intensidad Global", facialGlobalIntensity * 100f, 10f, 100f, 100f, "%") {
+                                            facialGlobalIntensity = it / 100f
+                                            val currentRelight = state.document?.facialRelights?.firstOrNull() ?: EditOperation.FacialRelight(zones = facialZones)
+                                            val updated = currentRelight.copy(globalSmoothness = facialGlobalSmoothness, globalIntensity = it / 100f)
+                                            onIntent(EditorIntent.UpdateFacialRelight(updated))
+                                        }
+
+                                        OutlinedButton(
+                                            onClick = {
+                                                facialZones = defaultFacialZones
+                                                onIntent(EditorIntent.UpdateFacialRelightZones(defaultFacialZones))
+                                            },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Icon(Icons.Default.RestartAlt, contentDescription = null, modifier = Modifier.size(16.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text("Restablecer Posiciones Anatómicas", fontSize = 12.sp)
                                         }
                                     }
                                 }
@@ -1242,62 +2056,80 @@ fun HyperEditorScreen(
 
                                 Text(text = "Gestor de Capas", color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp)
 
-                                // Quick Add Layer Actions (Tinte, Duplicar, Texto, Sticker)
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Button(
-                                        onClick = {
-                                            onIntent(
-                                                EditorIntent.AddColorLayer(
-                                                    name = "Capa Tinte ${layers.size + 1}",
-                                                    colorHex = 0xFFFFB300,
-                                                    blendMode = LayerBlendMode.OVERLAY,
-                                                    opacity = 0.4f
+                                // Quick Add Layer Actions (Tinte, Duplicar, Doble Exp, Texto, Sticker)
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Button(
+                                            onClick = {
+                                                onIntent(
+                                                    EditorIntent.AddColorLayer(
+                                                        name = "Capa Tinte ${layers.size + 1}",
+                                                        colorHex = 0xFFFFB300,
+                                                        blendMode = LayerBlendMode.OVERLAY,
+                                                        opacity = 0.4f
+                                                    )
                                                 )
-                                            )
-                                        },
-                                        modifier = Modifier.weight(1f),
-                                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
-                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                                    ) {
-                                        Text("+ Tinte", color = MaterialTheme.colorScheme.onPrimary, fontSize = 11.sp)
-                                    }
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                                        ) {
+                                            Text("+ Tinte", color = MaterialTheme.colorScheme.onPrimary, fontSize = 11.sp)
+                                        }
 
-                                    Button(
-                                        onClick = {
-                                            onIntent(
-                                                EditorIntent.AddDuplicateImageLayer(
-                                                    name = "Duplicado ${layers.size + 1}",
-                                                    blendMode = LayerBlendMode.SCREEN,
-                                                    opacity = 0.5f
+                                        Button(
+                                            onClick = {
+                                                onIntent(
+                                                    EditorIntent.AddDuplicateImageLayer(
+                                                        name = "Duplicado ${layers.size + 1}",
+                                                        blendMode = LayerBlendMode.SCREEN,
+                                                        opacity = 0.5f
+                                                    )
                                                 )
-                                            )
-                                        },
-                                        modifier = Modifier.weight(1f),
-                                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
-                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                                    ) {
-                                        Text("+ Duplicar", color = MaterialTheme.colorScheme.onSurface, fontSize = 11.sp)
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                        ) {
+                                            Text("+ Duplicar", color = MaterialTheme.colorScheme.onSurface, fontSize = 11.sp)
+                                        }
+
+                                        Button(
+                                            onClick = {
+                                                doubleExposurePicker.launch("image/*")
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF673AB7))
+                                        ) {
+                                            Text("+ Doble Exp.", color = Color.White, fontSize = 11.sp)
+                                        }
                                     }
 
-                                    Button(
-                                        onClick = { showAddTextLayerDialog = true },
-                                        modifier = Modifier.weight(1f),
-                                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
-                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
-                                        Text("+ Texto", color = MaterialTheme.colorScheme.onSurface, fontSize = 11.sp)
-                                    }
+                                        Button(
+                                            onClick = { showAddTextLayerDialog = true },
+                                            modifier = Modifier.weight(1f),
+                                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                        ) {
+                                            Text("+ Texto", color = MaterialTheme.colorScheme.onSurface, fontSize = 11.sp)
+                                        }
 
-                                    Button(
-                                        onClick = { showAddStickerDialog = true },
-                                        modifier = Modifier.weight(1f),
-                                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
-                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                                    ) {
-                                        Text("+ Sticker", color = MaterialTheme.colorScheme.onSurface, fontSize = 11.sp)
+                                        Button(
+                                            onClick = { showAddStickerDialog = true },
+                                            modifier = Modifier.weight(1f),
+                                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                        ) {
+                                            Text("+ Sticker", color = MaterialTheme.colorScheme.onSurface, fontSize = 11.sp)
+                                        }
                                     }
                                 }
 
@@ -1311,7 +2143,7 @@ fun HyperEditorScreen(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
-                                            text = "No hay capas adicionales.\nAgrega un tinte, duplica la imagen, o añade textos/stickers.",
+                                            text = "No hay capas adicionales.\nAgrega un tinte, duplica la imagen, añade doble exposición o textos/stickers.",
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             fontSize = 12.sp,
                                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -1332,6 +2164,8 @@ fun HyperEditorScreen(
                                                 onTransformChange = { ox, oy, sc, rot ->
                                                     onIntent(EditorIntent.UpdateLayerTransform(layer.id, ox, oy, sc, rot))
                                                 },
+                                                onToggleFlipH = { onIntent(EditorIntent.ToggleLayerFlipHorizontal(layer.id)) },
+                                                onToggleFlipV = { onIntent(EditorIntent.ToggleLayerFlipVertical(layer.id)) },
                                                 onMoveUp = { onIntent(EditorIntent.MoveLayerUp(layer.id)) },
                                                 onMoveDown = { onIntent(EditorIntent.MoveLayerDown(layer.id)) },
                                                 onDelete = { onIntent(EditorIntent.DeleteLayer(layer.id)) }
@@ -1344,22 +2178,204 @@ fun HyperEditorScreen(
                             EditorSectionTab.GEOMETRY_CROP -> {
                                 val crop = state.document?.cropTransform ?: EditOperation.CropTransform()
 
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                                // Selector de herramienta: Encuadre Proporcional vs Recorte personalizado
+                                TabRow(
+                                    selectedTabIndex = if (isCustomCropActive) 1 else 0,
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
                                 ) {
-                                    Text(text = "Recorte y Encuadre Snapseed", color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp)
-                                    TextButton(
+                                    Tab(
+                                        selected = !isCustomCropActive,
+                                        onClick = { isCustomCropActive = false },
+                                        text = { Text("Encuadre", fontSize = 11.sp, maxLines = 1) },
+                                        icon = { Icon(Icons.Default.Crop, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                    )
+                                    Tab(
+                                        selected = isCustomCropActive,
                                         onClick = {
-                                            cropUiState.reset()
-                                            onIntent(EditorIntent.ResetGeometry)
+                                            customCropState.syncFrom(crop)
+                                            isCustomCropActive = true
                                         },
-                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                                    ) {
-                                        Text("Restablecer Todo", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
-                                    }
+                                        text = { Text("Personalizado", fontSize = 11.sp, maxLines = 1) },
+                                        icon = { Icon(Icons.Default.CropFree, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                    )
                                 }
+
+                                if (isCustomCropActive) {
+                                    val baseBmp = state.originalBitmap
+                                    val imgW = baseBmp?.width?.toFloat() ?: 1000f
+                                    val imgH = baseBmp?.height?.toFloat() ?: 1000f
+                                    val pixelW = ((customCropState.cropRightNorm - customCropState.cropLeftNorm) * imgW).toInt().coerceAtLeast(1)
+                                    val pixelH = ((customCropState.cropBottomNorm - customCropState.cropTopNorm) * imgH).toInt().coerceAtLeast(1)
+                                    val ratioVal = pixelW.toFloat() / pixelH.toFloat()
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(text = "Recorte personalizado", color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp)
+                                        TextButton(
+                                            onClick = { customCropState.resetToFull() },
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                        ) {
+                                            Text("Restablecer", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
+                                        }
+                                    }
+
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant,
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(10.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = "Arrastra las 4 esquinas o los 4 lados para redimensionar libremente. Arrastra el centro para mover la selección.",
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                fontSize = 11.sp
+                                            )
+                                        }
+                                    }
+
+                                    // Switch Bloquear proporción
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = MaterialTheme.colorScheme.surface,
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column {
+                                                Text("Bloquear proporción", color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp)
+                                                Text(
+                                                    text = if (customCropState.isAspectRatioLocked) "Aspecto fijo actual (${String.format(java.util.Locale.US, "%.2f:1", ratioVal)})" else "Ancho y alto independientes (libre)",
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    fontSize = 11.sp
+                                                )
+                                            }
+                                            Switch(
+                                                checked = customCropState.isAspectRatioLocked,
+                                                onCheckedChange = { customCropState.toggleLockAspectRatio(imgW, imgH) }
+                                            )
+                                        }
+                                    }
+
+                                    // Switch Cuadrícula de tercios (3×3)
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = MaterialTheme.colorScheme.surface,
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text("Guías de composición (3×3)", color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp)
+                                            Switch(
+                                                checked = customCropState.showGrid,
+                                                onCheckedChange = { customCropState.showGrid = it }
+                                            )
+                                        }
+                                    }
+
+                                    // Dimensiones en tiempo real
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(10.dp),
+                                            horizontalArrangement = Arrangement.SpaceAround,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Text("Ancho Real", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+                                                Text("$pixelW px", color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp)
+                                            }
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Text("Alto Real", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+                                                Text("$pixelH px", color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp)
+                                            }
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Text("Proporción", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+                                                Text(String.format(java.util.Locale.US, "%.2f:1", ratioVal), color = MaterialTheme.colorScheme.primary, fontSize = 13.sp)
+                                            }
+                                        }
+                                    }
+
+                                    // Botones Cancelar y Aplicar
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        OutlinedButton(
+                                            onClick = {
+                                                customCropState.syncFrom(crop)
+                                                isCustomCropActive = false
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(16.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("Cancelar")
+                                        }
+
+                                        Button(
+                                            onClick = {
+                                                onIntent(
+                                                    EditorIntent.ApplyCustomFreeCrop(
+                                                        customCropState.cropLeftNorm,
+                                                        customCropState.cropTopNorm,
+                                                        customCropState.cropRightNorm,
+                                                        customCropState.cropBottomNorm
+                                                    )
+                                                )
+                                                isCustomCropActive = false
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("Aplicar")
+                                        }
+                                    }
+                                } else {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(text = "Recorte y Encuadre Snapseed", color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp)
+                                        TextButton(
+                                            onClick = {
+                                                cropUiState.reset()
+                                                onIntent(EditorIntent.ResetGeometry)
+                                            },
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                        ) {
+                                            Text("Restablecer Todo", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
+                                        }
+                                    }
 
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
@@ -1556,6 +2572,7 @@ fun HyperEditorScreen(
                                         }
                                     }
                                 }
+                                }
                             }
                         }
                     }
@@ -1632,19 +2649,28 @@ private fun MaskToolChip(
 @Composable
 private fun MaskCard(
     mask: MaskModel,
+    isSelected: Boolean,
+    onSelect: () -> Unit,
     onToggleEnabled: () -> Unit,
     onToggleInvert: () -> Unit,
+    onToggleMode: () -> Unit,
+    onSelectionTypeChange: (SelectionToolType) -> Unit,
+    onClearSelection: () -> Unit,
     onFeatherChange: (Float) -> Unit,
     onAdjustmentsChange: (EditOperation.Adjustments) -> Unit,
     onDelete: () -> Unit
 ) {
     val adj = mask.localAdjustments
+    val borderColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+    val borderWidth = if (isSelected) 2.dp else 1.dp
 
     Surface(
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceVariant,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
-        modifier = Modifier.fillMaxWidth()
+        border = androidx.compose.foundation.BorderStroke(borderWidth, borderColor),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onSelect() }
     ) {
         Column(
             modifier = Modifier
@@ -1668,22 +2694,47 @@ private fun MaskCard(
                         )
                     }
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = mask.name, color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp)
+                    Text(
+                        text = mask.name,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 13.sp,
+                        fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal
+                    )
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    // Modo Añadir / Quitar
+                    OutlinedButton(
+                        onClick = onToggleMode,
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = if (mask.selectionMode == SelectionMode.ADD) {
+                                Color(0xFFE91E63).copy(alpha = 0.2f)
+                            } else {
+                                Color(0xFF2196F3).copy(alpha = 0.2f)
+                            }
+                        ),
+                        modifier = Modifier.height(26.dp)
+                    ) {
+                        val modeLabel = if (mask.selectionMode == SelectionMode.ADD) "+ Añadir" else "- Quitar"
+                        Text(text = modeLabel, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurface)
+                    }
+
+                    // Invertir
                     OutlinedButton(
                         onClick = onToggleInvert,
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
                             containerColor = if (mask.isInverted) MaterialTheme.colorScheme.primary else Color.Transparent,
                             contentColor = if (mask.isInverted) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
-                        )
+                        ),
+                        modifier = Modifier.height(26.dp)
                     ) {
                         Text("Invertir", fontSize = 10.sp)
                     }
 
-                    IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+                    // Eliminar
+                    IconButton(onClick = onDelete, modifier = Modifier.size(26.dp)) {
                         Icon(
                             imageVector = Icons.Default.DeleteOutline,
                             contentDescription = "Eliminar",
@@ -1691,6 +2742,57 @@ private fun MaskCard(
                             modifier = Modifier.size(16.dp)
                         )
                     }
+                }
+            }
+
+            // Selector de Forma de Selección
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                MaskToolChip(
+                    label = "Rect",
+                    icon = Icons.Default.CropSquare,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    onSelectionTypeChange(SelectionToolType.RECTANGLE)
+                }
+                MaskToolChip(
+                    label = "Óvalo",
+                    icon = Icons.Default.RadioButtonUnchecked,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    onSelectionTypeChange(SelectionToolType.ELLIPSE)
+                }
+                MaskToolChip(
+                    label = "Lazo",
+                    icon = Icons.Default.Polyline,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    onSelectionTypeChange(SelectionToolType.LASSO)
+                }
+                MaskToolChip(
+                    label = "Pincel",
+                    icon = Icons.Default.Brush,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    onSelectionTypeChange(SelectionToolType.BRUSH)
+                }
+            }
+
+            // Botón Limpiar Selección
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(
+                    onClick = onClearSelection,
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                    modifier = Modifier.height(24.dp)
+                ) {
+                    Icon(Icons.Default.Clear, contentDescription = null, modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Limpiar selección", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
@@ -1735,6 +2837,8 @@ private fun LayerCard(
     onOpacityChange: (Float) -> Unit,
     onBlendModeChange: (LayerBlendMode) -> Unit,
     onTransformChange: (offsetX: Float, offsetY: Float, scale: Float, rotation: Float) -> Unit = { _, _, _, _ -> },
+    onToggleFlipH: () -> Unit = {},
+    onToggleFlipV: () -> Unit = {},
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
     onDelete: () -> Unit
@@ -1747,6 +2851,7 @@ private fun LayerCard(
         LayerType.IMAGE_DUPLICATE -> "Imagen"
         LayerType.TEXT -> "Texto"
         LayerType.STICKER -> "Sticker"
+        LayerType.DOUBLE_EXPOSURE -> "Doble Exp."
     }
 
     Surface(
@@ -1900,8 +3005,8 @@ private fun LayerCard(
                 )
             )
 
-            // Layer Transform Controls (For Text, Sticker, Duplicate Image)
-            if (layer.layerType == LayerType.TEXT || layer.layerType == LayerType.STICKER || layer.layerType == LayerType.IMAGE_DUPLICATE) {
+            // Layer Transform Controls (For Text, Sticker, Duplicate Image, Double Exposure)
+            if (layer.layerType == LayerType.TEXT || layer.layerType == LayerType.STICKER || layer.layerType == LayerType.IMAGE_DUPLICATE || layer.layerType == LayerType.DOUBLE_EXPOSURE) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), modifier = Modifier.padding(vertical = 4.dp))
                 Row(
                     modifier = Modifier
@@ -1912,7 +3017,7 @@ private fun LayerCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Transformación (Posición / Zoom / Giro)",
+                        text = "Transformación (Posición / Zoom / Giro / Flip)",
                         color = MaterialTheme.colorScheme.primary,
                         fontSize = 11.sp
                     )
@@ -1936,6 +3041,37 @@ private fun LayerCard(
                     }
                     AdjustmentSlider("Rotación", layer.rotationDegrees, -180f, 180f, 0f, unitSuffix = "°") {
                         onTransformChange(layer.offsetX, layer.offsetY, layer.scale, it)
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = onToggleFlipH,
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = if (layer.flipHorizontal) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.Transparent
+                            ),
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+                        ) {
+                            Icon(Icons.Default.Flip, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Voltear H", fontSize = 11.sp)
+                        }
+                        OutlinedButton(
+                            onClick = onToggleFlipV,
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = if (layer.flipVertical) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.Transparent
+                            ),
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+                        ) {
+                            Icon(Icons.Default.SwapVert, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Voltear V", fontSize = 11.sp)
+                        }
                     }
                 }
             }

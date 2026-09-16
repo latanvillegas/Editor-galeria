@@ -11,6 +11,11 @@ enum class SelectionToolType {
     BRUSH
 }
 
+enum class SelectionMode {
+    ADD,       // Añadir selección
+    SUBTRACT   // Quitar selección
+}
+
 @Parcelize
 data class RectNorm(
     val left: Float = 0.2f,
@@ -31,6 +36,7 @@ data class MaskModel(
     val id: String = UUID.randomUUID().toString(),
     val name: String = "Máscara 1",
     val selectionType: SelectionToolType = SelectionToolType.RECTANGLE,
+    val selectionMode: SelectionMode = SelectionMode.ADD,
     val rectBounds: RectNorm = RectNorm(0.2f, 0.2f, 0.8f, 0.8f),
     val ellipseBounds: RectNorm = RectNorm(0.25f, 0.25f, 0.75f, 0.75f),
     val lassoPoints: List<Pair<Float, Float>> = listOf(

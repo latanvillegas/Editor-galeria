@@ -18,7 +18,8 @@ enum class LayerType {
     IMAGE_DUPLICATE,
     COLOR_FILL,
     TEXT,
-    STICKER
+    STICKER,
+    DOUBLE_EXPOSURE
 }
 
 @Parcelize
@@ -34,6 +35,8 @@ data class LayerModel(
     val offsetY: Float = 0f,
     val scale: Float = 1.0f,
     val rotationDegrees: Float = 0f,
+    val flipHorizontal: Boolean = false,
+    val flipVertical: Boolean = false,
     val text: String? = null,
     val textSize: Float = 48f,
     val textColor: Long = 0xFFFFFFFF,

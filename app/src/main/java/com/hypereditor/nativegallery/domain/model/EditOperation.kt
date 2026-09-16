@@ -87,6 +87,101 @@ sealed interface EditOperation : Parcelable {
         val sourceY: Float,
         val targetX: Float,
         val targetY: Float,
-        val radius: Float = 28f
+        val radius: Float = 28f,
+        val hardness: Float = 0.5f,
+        val opacity: Float = 1.0f,
+        val flow: Float = 1.0f
+    ) : EditOperation
+
+    @Parcelize
+    data class PointOffset(
+        val dx: Float,
+        val dy: Float
+    ) : Parcelable
+
+    @Parcelize
+    data class HealingPoint(
+        val targetX: Float,
+        val targetY: Float
+    ) : Parcelable
+
+    @Parcelize
+    data class HealingStroke(
+        val id: String = UUID.randomUUID().toString(),
+        val points: List<HealingPoint>,
+        val radius: Float = 28f,
+        val feather: Float = 0.5f,
+        val strength: Float = 1.0f,
+        val manualSourceOffset: PointOffset? = null // null: Muestreo automático vecindario local, no nulo: Muestreo manual
+    ) : EditOperation
+
+    @Parcelize
+    data class PatchOperation(
+        val id: String = UUID.randomUUID().toString(),
+        val targetCenterXNorm: Float,
+        val targetCenterYNorm: Float,
+        val sourceCenterXNorm: Float,
+        val sourceCenterYNorm: Float,
+        val radiusNorm: Float = 0.08f,
+        val feather: Float = 0.5f,
+        val strength: Float = 1.0f,
+        val boundaryPoints: List<Pair<Float, Float>> = emptyList() // Opcional si fue selección libre
+    ) : EditOperation
+
+    @Parcelize
+    data class PortraitLight(
+        val id: String = UUID.randomUUID().toString(),
+        val centerXNorm: Float = 0.5f,
+        val centerYNorm: Float = 0.4f,
+        val radiusXNorm: Float = 0.25f,
+        val radiusYNorm: Float = 0.32f,
+        val rotationDegrees: Float = 0f,
+        val isBrushMode: Boolean = false,
+        val brushPoints: List<Pair<Float, Float>> = emptyList(),
+        val exposure: Float = 0.35f,
+        val shadows: Float = 0.2f,
+        val highlights: Float = -0.1f,
+        val temperature: Float = 0.1f,
+        val feather: Float = 0.65f,
+        val opacity: Float = 0.85f,
+        val isInverted: Boolean = false,
+        val isEnabled: Boolean = true
+    ) : EditOperation
+
+    enum class FacialZoneType {
+        ALL,
+        FOREHEAD,
+        LEFT_CHEEK,
+        RIGHT_CHEEK,
+        NOSE,
+        CHIN,
+        JAWLINE
+    }
+
+    @Parcelize
+    data class FacialRelightZone(
+        val zoneType: FacialZoneType,
+        val centerXNorm: Float,
+        val centerYNorm: Float,
+        val radiusXNorm: Float,
+        val radiusYNorm: Float,
+        val exposure: Float = 0.2f,
+        val temperature: Float = 0.05f,
+        val shadows: Float = 0.15f,
+        val contrast: Float = 1.05f,
+        val smoothness: Float = 0.1f,
+        val intensity: Float = 0.8f,
+        val feather: Float = 0.6f,
+        val opacity: Float = 1.0f,
+        val isEnabled: Boolean = true,
+        val customPoints: List<Pair<Float, Float>> = emptyList()
+    ) : Parcelable
+
+    @Parcelize
+    data class FacialRelight(
+        val id: String = UUID.randomUUID().toString(),
+        val zones: List<FacialRelightZone> = emptyList(),
+        val globalIntensity: Float = 1.0f,
+        val globalOpacity: Float = 1.0f
     ) : EditOperation
 }

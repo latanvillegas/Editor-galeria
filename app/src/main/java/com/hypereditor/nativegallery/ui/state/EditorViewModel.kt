@@ -136,8 +136,32 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                 )
                 doc.copy(cloneStamps = doc.cloneStamps + newStamp)
             }
+            is EditorIntent.AddCloneStampBatch -> mutateDocument("Tampón de clonar") { doc ->
+                doc.copy(cloneStamps = doc.cloneStamps + intent.stamps)
+            }
             is EditorIntent.ClearCloneStamps -> mutateDocument("Limpiar clones") { doc ->
                 doc.copy(cloneStamps = emptyList())
+            }
+            is EditorIntent.AddHealingStroke -> mutateDocument("Pincel Corrector / Healing") { doc ->
+                doc.copy(healingStrokes = doc.healingStrokes + intent.stroke)
+            }
+            is EditorIntent.ClearHealingStrokes -> mutateDocument("Limpiar correcciones") { doc ->
+                doc.copy(healingStrokes = emptyList())
+            }
+            is EditorIntent.AddPatchOperation -> mutateDocument("Parche manual") { doc ->
+                doc.copy(patchOperations = doc.patchOperations + intent.patch)
+            }
+            is EditorIntent.ClearPatchOperations -> mutateDocument("Limpiar parches") { doc ->
+                doc.copy(patchOperations = emptyList())
+            }
+            is EditorIntent.UpdatePortraitLight -> updatePortraitLight(intent.light, intent.isFinished)
+            is EditorIntent.ClearPortraitLights -> mutateDocument("Limpiar luz de retrato") { doc ->
+                doc.copy(portraitLights = emptyList())
+            }
+            is EditorIntent.UpdateFacialRelight -> updateFacialRelight(intent.relight, intent.isFinished)
+            is EditorIntent.UpdateFacialZone -> updateFacialZone(intent.zone, intent.isFinished)
+            is EditorIntent.ClearFacialRelights -> mutateDocument("Limpiar reiluminación facial") { doc ->
+                doc.copy(facialRelights = emptyList())
             }
 
             // Masks & Selections
@@ -146,10 +170,13 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             is EditorIntent.ToggleMaskInvert -> toggleMaskInvert(intent.maskId)
             is EditorIntent.UpdateMaskFeather -> updateMaskFeather(intent.maskId, intent.feather)
             is EditorIntent.UpdateMaskSelectionType -> updateMaskSelectionType(intent.maskId, intent.type)
+            is EditorIntent.UpdateMaskSelectionMode -> updateMaskSelectionMode(intent.maskId, intent.mode)
             is EditorIntent.UpdateMaskRectBounds -> updateMaskRectBounds(intent.maskId, intent.bounds)
             is EditorIntent.UpdateMaskEllipseBounds -> updateMaskEllipseBounds(intent.maskId, intent.bounds)
+            is EditorIntent.UpdateMaskLassoPoints -> updateMaskLassoPoints(intent.maskId, intent.points)
             is EditorIntent.AddMaskBrushStroke -> addMaskBrushStroke(intent.maskId, intent.stroke)
             is EditorIntent.ClearMaskBrushStrokes -> clearMaskBrushStrokes(intent.maskId)
+            is EditorIntent.ClearMask -> clearMask(intent.maskId)
             is EditorIntent.UpdateMaskLocalAdjustments -> updateMaskLocalAdjustments(intent.maskId, intent.adjustments)
             is EditorIntent.DeleteMask -> deleteMask(intent.maskId)
             is EditorIntent.SelectActiveMask -> _uiState.update { it.copy(activeMaskId = intent.maskId) }
@@ -157,9 +184,12 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             // Layers
             is EditorIntent.AddColorLayer -> addColorLayer(intent.name, intent.colorHex, intent.blendMode, intent.opacity)
             is EditorIntent.AddDuplicateImageLayer -> addDuplicateImageLayer(intent.name, intent.blendMode, intent.opacity)
+            is EditorIntent.AddDoubleExposureLayer -> addDoubleExposureLayer(intent.bitmap, intent.name, intent.blendMode, intent.opacity)
             is EditorIntent.AddTextLayer -> addTextLayer(intent.text, intent.textSize, intent.textColor, intent.blendMode, intent.opacity)
             is EditorIntent.AddStickerLayer -> addStickerLayer(intent.emoji, intent.blendMode, intent.opacity)
             is EditorIntent.UpdateLayerTransform -> updateLayerTransform(intent.layerId, intent.offsetX, intent.offsetY, intent.scale, intent.rotation)
+            is EditorIntent.ToggleLayerFlipHorizontal -> toggleLayerFlipHorizontal(intent.layerId)
+            is EditorIntent.ToggleLayerFlipVertical -> toggleLayerFlipVertical(intent.layerId)
             is EditorIntent.ToggleLayerVisibility -> toggleLayerVisibility(intent.layerId)
             is EditorIntent.UpdateLayerOpacity -> updateLayerOpacity(intent.layerId, intent.opacity)
             is EditorIntent.UpdateLayerBlendMode -> updateLayerBlendMode(intent.layerId, intent.blendMode)
@@ -233,6 +263,21 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                         cropTopNorm = intent.top.coerceIn(0f, 0.9f),
                         cropRightNorm = intent.right.coerceIn(0.1f, 1f),
                         cropBottomNorm = intent.bottom.coerceIn(0.1f, 1f)
+                    )
+                )
+            }
+            is EditorIntent.ApplyCustomFreeCrop -> mutateDocument("Recorte personalizado") { doc ->
+                val safeL = intent.leftNorm.coerceIn(0f, 0.98f)
+                val safeT = intent.topNorm.coerceIn(0f, 0.98f)
+                val safeR = intent.rightNorm.coerceIn(safeL + 0.01f, 1f)
+                val safeB = intent.bottomNorm.coerceIn(safeT + 0.01f, 1f)
+                doc.copy(
+                    cropTransform = doc.cropTransform.copy(
+                        cropLeftNorm = safeL,
+                        cropTopNorm = safeT,
+                        cropRightNorm = safeR,
+                        cropBottomNorm = safeB,
+                        aspectRatio = com.hypereditor.nativegallery.domain.model.CropAspectRatio.FREE
                     )
                 )
             }
@@ -355,6 +400,14 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    private fun updateMaskSelectionMode(maskId: String, mode: com.hypereditor.nativegallery.domain.model.SelectionMode) {
+        mutateDocument { doc ->
+            doc.copy(masks = doc.masks.map {
+                if (it.id == maskId) it.copy(selectionMode = mode) else it
+            })
+        }
+    }
+
     private fun updateMaskRectBounds(maskId: String, bounds: RectNorm) {
         mutateDocument { doc ->
             doc.copy(masks = doc.masks.map {
@@ -371,6 +424,14 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    private fun updateMaskLassoPoints(maskId: String, points: List<Pair<Float, Float>>) {
+        mutateDocument { doc ->
+            doc.copy(masks = doc.masks.map {
+                if (it.id == maskId) it.copy(lassoPoints = points) else it
+            })
+        }
+    }
+
     private fun addMaskBrushStroke(maskId: String, stroke: MaskBrushStroke) {
         mutateDocument { doc ->
             doc.copy(masks = doc.masks.map {
@@ -383,6 +444,21 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         mutateDocument { doc ->
             doc.copy(masks = doc.masks.map {
                 if (it.id == maskId) it.copy(brushStrokes = emptyList()) else it
+            })
+        }
+    }
+
+    private fun clearMask(maskId: String) {
+        mutateDocument { doc ->
+            doc.copy(masks = doc.masks.map {
+                if (it.id == maskId) {
+                    it.copy(
+                        brushStrokes = emptyList(),
+                        lassoPoints = emptyList(),
+                        rectBounds = RectNorm(0.5f, 0.5f, 0.5f, 0.5f),
+                        ellipseBounds = RectNorm(0.5f, 0.5f, 0.5f, 0.5f)
+                    )
+                } else it
             })
         }
     }
@@ -490,6 +566,102 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                 if (it.id == layerId) it.copy(opacity = opacity) else it
             })
         }
+    }
+
+    private fun addDoubleExposureLayer(bitmap: Bitmap, name: String, blendMode: LayerBlendMode, opacity: Float) {
+        val newLayer = LayerModel(
+            name = name,
+            layerType = LayerType.DOUBLE_EXPOSURE,
+            bitmap = bitmap,
+            blendMode = blendMode,
+            opacity = opacity
+        )
+        mutateDocument("Añadir Doble Exposición") { doc ->
+            doc.copy(layers = doc.layers + newLayer)
+        }
+        _uiState.update { it.copy(activeLayerId = newLayer.id) }
+    }
+
+    private fun toggleLayerFlipHorizontal(layerId: String) {
+        mutateDocument { doc ->
+            doc.copy(layers = doc.layers.map {
+                if (it.id == layerId) it.copy(flipHorizontal = !it.flipHorizontal) else it
+            })
+        }
+    }
+
+    private fun toggleLayerFlipVertical(layerId: String) {
+        mutateDocument { doc ->
+            doc.copy(layers = doc.layers.map {
+                if (it.id == layerId) it.copy(flipVertical = !it.flipVertical) else it
+            })
+        }
+    }
+
+    private fun updatePortraitLight(light: EditOperation.PortraitLight, isFinished: Boolean) {
+        if (!isFinished) {
+            // Preview rápido sin mutar historial
+            val doc = _uiState.value.document ?: return
+            val existing = doc.portraitLights
+            val updated = if (existing.none { it.id == light.id }) {
+                existing + light
+            } else {
+                existing.map { if (it.id == light.id) light else it }
+            }
+            val tempDoc = doc.copy(portraitLights = updated)
+            _uiState.update { it.copy(document = tempDoc) }
+            renderPreviewFast(tempDoc)
+        } else {
+            mutateDocument("Luz de retrato") { doc ->
+                val existing = doc.portraitLights
+                val updated = if (existing.none { it.id == light.id }) {
+                    existing + light
+                } else {
+                    existing.map { if (it.id == light.id) light else it }
+                }
+                doc.copy(portraitLights = updated)
+            }
+        }
+    }
+
+    private fun updateFacialRelight(relight: EditOperation.FacialRelight, isFinished: Boolean) {
+        if (!isFinished) {
+            val doc = _uiState.value.document ?: return
+            val existing = doc.facialRelights
+            val updated = if (existing.none { it.id == relight.id }) {
+                existing + relight
+            } else {
+                existing.map { if (it.id == relight.id) relight else it }
+            }
+            val tempDoc = doc.copy(facialRelights = updated)
+            _uiState.update { it.copy(document = tempDoc) }
+            renderPreviewFast(tempDoc)
+        } else {
+            mutateDocument("Reiluminación facial") { doc ->
+                val existing = doc.facialRelights
+                val updated = if (existing.none { it.id == relight.id }) {
+                    existing + relight
+                } else {
+                    existing.map { if (it.id == relight.id) relight else it }
+                }
+                doc.copy(facialRelights = updated)
+            }
+        }
+    }
+
+    private fun updateFacialZone(zone: EditOperation.FacialRelightZone, isFinished: Boolean) {
+        val doc = _uiState.value.document ?: return
+        val currentRelights = doc.facialRelights
+        val targetRelight = currentRelights.firstOrNull() ?: EditOperation.FacialRelight(
+            zones = listOf(zone)
+        )
+        val updatedZones = if (targetRelight.zones.none { it.zoneType == zone.zoneType }) {
+            targetRelight.zones + zone
+        } else {
+            targetRelight.zones.map { if (it.zoneType == zone.zoneType) zone else it }
+        }
+        val newRelight = targetRelight.copy(zones = updatedZones)
+        updateFacialRelight(newRelight, isFinished)
     }
 
     private fun updateLayerBlendMode(layerId: String, blendMode: LayerBlendMode) {

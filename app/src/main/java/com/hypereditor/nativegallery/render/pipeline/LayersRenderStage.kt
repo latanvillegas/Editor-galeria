@@ -45,10 +45,12 @@ class LayersRenderStage : RenderStage {
                 paint.alpha = (layer.opacity.coerceIn(0f, 1f) * 255).toInt()
                 canvas.drawRect(0f, 0f, canvas.width.toFloat(), canvas.height.toFloat(), paint)
             }
-            LayerType.IMAGE_DUPLICATE -> {
+            LayerType.IMAGE_DUPLICATE, LayerType.DOUBLE_EXPOSURE -> {
                 val bmp = layer.bitmap ?: baseInput
+                val scaleX = if (layer.flipHorizontal) -layer.scale else layer.scale
+                val scaleY = if (layer.flipVertical) -layer.scale else layer.scale
                 val matrix = Matrix().apply {
-                    postScale(layer.scale, layer.scale, bmp.width / 2f, bmp.height / 2f)
+                    postScale(scaleX, scaleY, bmp.width / 2f, bmp.height / 2f)
                     postRotate(layer.rotationDegrees, bmp.width / 2f, bmp.height / 2f)
                     postTranslate(layer.offsetX, layer.offsetY)
                 }

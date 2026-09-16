@@ -53,20 +53,32 @@ class CloneStampRenderStage : RenderStage {
         // Extraer parche de origen
         val patchBmp = Bitmap.createBitmap(sourceBmp, srcRect.left, srcRect.top, w, h)
 
-        // Crear máscara circular con bordes difuminados
+        val hardness = stamp.hardness.coerceIn(0.05f, 1.0f)
+        val opacity = stamp.opacity.coerceIn(0.01f, 1.0f)
+        val flow = stamp.flow.coerceIn(0.01f, 1.0f)
+        val combinedAlpha = (opacity * flow).coerceIn(0.01f, 1.0f)
+
+        // Crear máscara circular con bordes difuminados según dureza (hardness)
         val maskedPatch = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val patchCanvas = Canvas(maskedPatch)
         val maskPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            maskFilter = BlurMaskFilter(radius * 0.25f, BlurMaskFilter.Blur.NORMAL)
+            if (hardness < 0.95f) {
+                val blurRadius = (radius * (1.0f - hardness) * 0.5f).coerceAtLeast(1f)
+                maskFilter = BlurMaskFilter(blurRadius, BlurMaskFilter.Blur.NORMAL)
+            }
         }
-        patchCanvas.drawCircle(w / 2f, h / 2f, (radius * 0.85f).coerceAtLeast(4f), maskPaint)
+        val innerCircleRadius = (radius * hardness).coerceIn(4f, radius)
+        patchCanvas.drawCircle(w / 2f, h / 2f, innerCircleRadius, maskPaint)
 
         val drawPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_IN)
         }
         patchCanvas.drawBitmap(patchBmp, 0f, 0f, drawPaint)
 
-        // Dibujar el parche en el destino
-        canvas.drawBitmap(maskedPatch, targetPxX - w / 2f, targetPxY - h / 2f, null)
+        // Dibujar el parche en el destino aplicando opacidad y flujo
+        val finalPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            alpha = (combinedAlpha * 255).toInt().coerceIn(1, 255)
+        }
+        canvas.drawBitmap(maskedPatch, targetPxX - w / 2f, targetPxY - h / 2f, finalPaint)
     }
 }

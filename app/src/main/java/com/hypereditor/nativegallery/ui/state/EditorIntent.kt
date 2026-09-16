@@ -48,7 +48,19 @@ sealed interface EditorIntent {
     data class UpdateTextOverlay(val textItem: EditOperation.TextOverlay) : EditorIntent
     data class DeleteTextOverlay(val textId: String) : EditorIntent
     data class AddCloneStamp(val sourceX: Float, val sourceY: Float, val targetX: Float, val targetY: Float, val radius: Float = 40f) : EditorIntent
+    data class AddCloneStampBatch(val stamps: List<EditOperation.CloneStampPoint>) : EditorIntent
     data object ClearCloneStamps : EditorIntent
+    data class AddHealingStroke(val stroke: EditOperation.HealingStroke) : EditorIntent
+    data object ClearHealingStrokes : EditorIntent
+    data class AddPatchOperation(val patch: EditOperation.PatchOperation) : EditorIntent
+    data object ClearPatchOperations : EditorIntent
+
+    // Portrait Light & Facial Relight
+    data class UpdatePortraitLight(val light: EditOperation.PortraitLight, val isFinished: Boolean = true) : EditorIntent
+    data object ClearPortraitLights : EditorIntent
+    data class UpdateFacialRelight(val relight: EditOperation.FacialRelight, val isFinished: Boolean = true) : EditorIntent
+    data class UpdateFacialZone(val zone: EditOperation.FacialRelightZone, val isFinished: Boolean = true) : EditorIntent
+    data object ClearFacialRelights : EditorIntent
 
     // Masks & Selections
     data class AddMask(val selectionType: SelectionToolType) : EditorIntent
@@ -56,10 +68,13 @@ sealed interface EditorIntent {
     data class ToggleMaskInvert(val maskId: String) : EditorIntent
     data class UpdateMaskFeather(val maskId: String, val feather: Float) : EditorIntent
     data class UpdateMaskSelectionType(val maskId: String, val type: SelectionToolType) : EditorIntent
+    data class UpdateMaskSelectionMode(val maskId: String, val mode: com.hypereditor.nativegallery.domain.model.SelectionMode) : EditorIntent
     data class UpdateMaskRectBounds(val maskId: String, val bounds: RectNorm) : EditorIntent
     data class UpdateMaskEllipseBounds(val maskId: String, val bounds: RectNorm) : EditorIntent
+    data class UpdateMaskLassoPoints(val maskId: String, val points: List<Pair<Float, Float>>) : EditorIntent
     data class AddMaskBrushStroke(val maskId: String, val stroke: MaskBrushStroke) : EditorIntent
     data class ClearMaskBrushStrokes(val maskId: String) : EditorIntent
+    data class ClearMask(val maskId: String) : EditorIntent
     data class UpdateMaskLocalAdjustments(val maskId: String, val adjustments: EditOperation.Adjustments) : EditorIntent
     data class DeleteMask(val maskId: String) : EditorIntent
     data class SelectActiveMask(val maskId: String?) : EditorIntent
@@ -67,9 +82,12 @@ sealed interface EditorIntent {
     // Layers
     data class AddColorLayer(val name: String, val colorHex: Long, val blendMode: LayerBlendMode = LayerBlendMode.OVERLAY, val opacity: Float = 0.5f) : EditorIntent
     data class AddDuplicateImageLayer(val name: String = "Capa Duplicada", val blendMode: LayerBlendMode = LayerBlendMode.SCREEN, val opacity: Float = 0.7f) : EditorIntent
+    data class AddDoubleExposureLayer(val bitmap: Bitmap, val name: String = "Doble Exposición", val blendMode: LayerBlendMode = LayerBlendMode.SCREEN, val opacity: Float = 0.75f) : EditorIntent
     data class AddTextLayer(val text: String, val textSize: Float = 48f, val textColor: Long = 0xFFFFFFFF, val blendMode: LayerBlendMode = LayerBlendMode.NORMAL, val opacity: Float = 1.0f) : EditorIntent
     data class AddStickerLayer(val emoji: String, val blendMode: LayerBlendMode = LayerBlendMode.NORMAL, val opacity: Float = 1.0f) : EditorIntent
     data class UpdateLayerTransform(val layerId: String, val offsetX: Float, val offsetY: Float, val scale: Float, val rotation: Float) : EditorIntent
+    data class ToggleLayerFlipHorizontal(val layerId: String) : EditorIntent
+    data class ToggleLayerFlipVertical(val layerId: String) : EditorIntent
     data class ToggleLayerVisibility(val layerId: String) : EditorIntent
     data class UpdateLayerOpacity(val layerId: String, val opacity: Float) : EditorIntent
     data class UpdateLayerBlendMode(val layerId: String, val blendMode: LayerBlendMode) : EditorIntent
@@ -92,6 +110,7 @@ sealed interface EditorIntent {
     data object BeginCropInteraction : EditorIntent
     data class CommitCropTransform(val actionLabel: String = "Recorte y encuadre") : EditorIntent
     data class ApplyCropNorm(val left: Float, val top: Float, val right: Float, val bottom: Float) : EditorIntent
+    data class ApplyCustomFreeCrop(val leftNorm: Float, val topNorm: Float, val rightNorm: Float, val bottomNorm: Float) : EditorIntent
     data class ApplyAspectRatioCrop(val ratioW: Float, val ratioH: Float) : EditorIntent
     data object ResetCrop : EditorIntent
     data object ResetGeometry : EditorIntent

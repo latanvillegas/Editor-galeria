@@ -25,7 +25,7 @@ fun DesktopGeometryPanel(state: EditorUiState, onIntent: (EditorIntent) -> Unit,
         }
         Spacer(Modifier.height(6.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            GeometryButton("1:1", Modifier.weight(1f)) { onIntent(EditorIntent.SetCropAspectRatio(CropAspectRatio.SQUARE)) }
+            GeometryButton("1:1", Modifier.weight(1f)) { onIntent(EditorIntent.SetCropAspectRatio(CropAspectRatio.RATIO_1_1)) }
             GeometryButton("4:3", Modifier.weight(1f)) { onIntent(EditorIntent.SetCropAspectRatio(CropAspectRatio.RATIO_4_3)) }
             GeometryButton("16:9", Modifier.weight(1f)) { onIntent(EditorIntent.SetCropAspectRatio(CropAspectRatio.RATIO_16_9)) }
         }

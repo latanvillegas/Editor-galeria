@@ -8,10 +8,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-/**
- * Structural shell for the desktop editor. Canvas and inspector remain slots so the
- * existing HyperEditorScreen functionality can be moved into this layout incrementally.
- */
 @Composable
 fun DesktopWorkspaceShell(
     selectedTool: DesktopTool,
@@ -25,37 +21,33 @@ fun DesktopWorkspaceShell(
     onRedo: () -> Unit,
     onSave: () -> Unit,
     onClose: () -> Unit,
+    onZoomOut: () -> Unit,
+    onZoomIn: () -> Unit,
+    onResetView: () -> Unit,
     canvas: @Composable RowScope.() -> Unit,
     inspector: @Composable () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier.fillMaxSize().background(Color(0xFF1E1E1E))) {
-        DesktopMenuBar(
-            onClose = onClose,
-            onUndo = onUndo,
-            onRedo = onRedo,
-            onSave = onSave,
-            canUndo = canUndo,
-            canRedo = canRedo,
-            isSaving = isSaving
-        )
+        DesktopMenuBar(onClose, onUndo, onRedo, onSave, canUndo, canRedo, isSaving)
         DesktopToolOptionsBar(selectedTool, documentSize)
         Row(Modifier.fillMaxWidth().weight(1f)) {
             DesktopToolBar(selectedTool, onToolSelected)
             Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .background(Color(0xFF181818)),
+                modifier = Modifier.weight(1f).fillMaxHeight().background(Color(0xFF181818)),
                 content = canvas
             )
             Surface(
                 modifier = Modifier.widthIn(min = 260.dp, max = 360.dp).fillMaxHeight(),
                 color = Color(0xFF252525)
-            ) {
-                inspector()
-            }
+            ) { inspector() }
         }
-        DesktopStatusBar(zoomPercent = zoomPercent, documentSize = documentSize)
+        DesktopStatusBar(
+            zoomPercent = zoomPercent,
+            documentSize = documentSize,
+            onZoomOut = onZoomOut,
+            onZoomIn = onZoomIn,
+            onResetView = onResetView
+        )
     }
 }

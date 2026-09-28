@@ -50,6 +50,7 @@ private fun PropertiesContent(state: EditorUiState, onIntent: (EditorIntent) -> 
         when (state.selectedTab) {
             EditorSectionTab.ADJUSTMENTS -> DesktopAdjustmentsPanel(state, onIntent, Modifier.fillMaxSize())
             EditorSectionTab.GEOMETRY_CROP -> DesktopGeometryPanel(state, onIntent, Modifier.fillMaxSize())
+            EditorSectionTab.FILTERS_PRESETS -> DesktopFiltersPanel(state, onIntent, Modifier.fillMaxSize())
             else -> ContextPlaceholder(title, onIntent)
         }
     }

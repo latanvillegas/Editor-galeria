@@ -29,10 +29,18 @@ fun DesktopWorkspaceShell(
     modifier: Modifier = Modifier
 ) {
     Column(modifier.fillMaxSize().background(Color(0xFF1E1E1E))) {
-        DesktopMenuBar(onClose, onUndo, onRedo, onSave, canUndo, canRedo, isSaving)
-        DesktopToolOptionsBar(selectedTool, documentSize)
+        DesktopMenuBar(
+            onClose = onClose,
+            onUndo = onUndo,
+            onRedo = onRedo,
+            onSave = onSave,
+            canUndo = canUndo,
+            canRedo = canRedo,
+            isSaving = isSaving
+        )
+        DesktopToolOptionsBar(activeTool = selectedTool, documentSize = documentSize)
         Row(Modifier.fillMaxWidth().weight(1f)) {
-            DesktopToolBar(selectedTool, onToolSelected)
+            DesktopToolBar(selected = selectedTool, onSelect = onToolSelected)
             Row(
                 modifier = Modifier.weight(1f).fillMaxHeight().background(Color(0xFF181818)),
                 content = canvas

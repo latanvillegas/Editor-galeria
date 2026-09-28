@@ -74,10 +74,20 @@ private fun toolHint(tool: DesktopTool): String = when (tool) {
     }
 }
 
-@Composable fun DesktopStatusBar(zoomPercent: Int, documentSize: String?, modifier: Modifier = Modifier) {
-    Surface(modifier = modifier.fillMaxWidth().height(26.dp), color = Color(0xFF242424), border = BorderStroke(1.dp, Color(0xFF353535))) {
-        Row(Modifier.fillMaxSize().padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("$zoomPercent%", color = Color(0xFFD0D0D0), fontSize = 11.sp); Spacer(Modifier.width(16.dp)); documentSize?.let { Text(it, color = Color(0xFFAFAFAF), fontSize = 11.sp) }
+@Composable fun DesktopStatusBar(
+    zoomPercent: Int,
+    documentSize: String?,
+    onZoomOut: () -> Unit,
+    onZoomIn: () -> Unit,
+    onResetView: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(modifier = modifier.fillMaxWidth().height(30.dp), color = Color(0xFF242424), border = BorderStroke(1.dp, Color(0xFF353535))) {
+        Row(Modifier.fillMaxSize().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onZoomOut, modifier = Modifier.size(26.dp)) { Icon(Icons.Default.Remove, "Alejar", tint = Color(0xFFD0D0D0), modifier = Modifier.size(15.dp)) }
+            Text("$zoomPercent%", color = Color(0xFFD0D0D0), fontSize = 11.sp, modifier = Modifier.clickable(onClick = onResetView).padding(horizontal = 6.dp))
+            IconButton(onClick = onZoomIn, modifier = Modifier.size(26.dp)) { Icon(Icons.Default.Add, "Acercar", tint = Color(0xFFD0D0D0), modifier = Modifier.size(15.dp)) }
+            Spacer(Modifier.width(12.dp)); documentSize?.let { Text(it, color = Color(0xFFAFAFAF), fontSize = 11.sp) }
             Spacer(Modifier.weight(1f)); Text("RGB • Offline", color = Color(0xFF8F8F8F), fontSize = 10.sp)
         }
     }

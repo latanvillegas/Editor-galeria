@@ -77,6 +77,7 @@ fun DesktopEditorScreen(state: EditorUiState, onIntent: (EditorIntent) -> Unit, 
                     documentSize = documentSize,
                     activeTool = selectedTool,
                     zoomPercent = viewportState.zoomPercentage,
+                    viewportState = viewportState,
                     modifier = Modifier.fillMaxSize()
                 ) {
                     DesktopInteractiveCanvasHost(state = state, onIntent = onIntent, viewportState = viewportState, modifier = Modifier.fillMaxSize())

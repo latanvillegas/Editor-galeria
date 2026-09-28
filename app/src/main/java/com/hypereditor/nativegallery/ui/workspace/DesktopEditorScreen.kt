@@ -51,7 +51,7 @@ fun DesktopEditorScreen(state: EditorUiState, onIntent: (EditorIntent) -> Unit, 
                     ctrl && event.key == Key.S -> { if (!state.isExporting) onIntent(EditorIntent.SaveAndExport()); true }
                     ctrl && (event.key == Key.Equals || event.key == Key.NumPadAdd) -> { zoomBy(1.15f); true }
                     ctrl && (event.key == Key.Minus || event.key == Key.NumPadSubtract) -> { zoomBy(1f / 1.15f); true }
-                    ctrl && event.key == Key.Digit0 -> { viewportState.reset(); true }
+                    ctrl && event.key == Key.Zero -> { viewportState.reset(); true }
                     event.key == Key.DirectionLeft && selectedTool == DesktopTool.HAND -> { viewportState.panX += 32f; true }
                     event.key == Key.DirectionRight && selectedTool == DesktopTool.HAND -> { viewportState.panX -= 32f; true }
                     event.key == Key.DirectionUp && selectedTool == DesktopTool.HAND -> { viewportState.panY += 32f; true }

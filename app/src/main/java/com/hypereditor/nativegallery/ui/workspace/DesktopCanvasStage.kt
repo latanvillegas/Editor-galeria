@@ -15,14 +15,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/**
- * Desktop document stage. It isolates the central document area from the workspace
- * chrome so the legacy editor canvas can be extracted behind this boundary without
- * changing the outer layout again.
- */
+/** Desktop document stage with Photoshop-style document/tool context. */
 @Composable
 fun DesktopCanvasStage(
     documentSize: String?,
+    activeTool: DesktopTool,
+    zoomPercent: Int,
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit
 ) {
@@ -39,7 +37,7 @@ fun DesktopCanvasStage(
                 Text("• $it", color = Color(0xFF8F8F8F), fontSize = 10.sp)
             }
             Spacer(Modifier.weight(1f))
-            Text("RGB", color = Color(0xFF858585), fontSize = 9.sp)
+            Text("${activeTool.label}  •  $zoomPercent%  •  RGB", color = Color(0xFF9E9E9E), fontSize = 9.sp)
         }
         HorizontalDivider(color = Color(0xFF3A3A3A))
         Box(

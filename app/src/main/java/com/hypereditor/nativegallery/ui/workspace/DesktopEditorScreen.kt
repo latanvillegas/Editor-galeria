@@ -9,13 +9,15 @@ import com.hypereditor.nativegallery.ui.state.EditorIntent
 import com.hypereditor.nativegallery.ui.state.EditorUiState
 
 private val LegacyEditorHeaderHeight = 56.dp
+private val LegacyEditorOptionsWidth = 360.dp
 
 /**
  * Incremental desktop host around the proven editor implementation.
  *
- * Desktop chrome owns close/undo/redo/save, so the legacy 56dp editor header is
- * clipped out here. The legacy editor remains mounted below that boundary while
- * its interactive canvases and option panels are extracted incrementally.
+ * Desktop chrome owns close/undo/redo/save and the desktop inspector now owns the
+ * migrated option panels. We therefore crop the legacy 56dp header and the legacy
+ * right-side options panel while keeping the proven interactive canvas mounted.
+ * This removes duplicated UI without rewriting the gesture/rendering engine.
  */
 @Composable
 fun DesktopEditorScreen(
@@ -50,9 +52,13 @@ fun DesktopEditorScreen(
                 modifier = Modifier.weight(1f).fillMaxSize()
             ) {
                 BoxWithConstraints(Modifier.fillMaxSize()) {
+                    // HyperEditorScreen still lays out its interactive canvas beside a
+                    // legacy fixed-width options panel. Give it that extra width, then
+                    // clip the panel outside this desktop stage. The canvas receives the
+                    // full visible width and keeps all existing gesture behavior.
                     Box(
                         Modifier
-                            .fillMaxWidth()
+                            .requiredWidth(maxWidth + LegacyEditorOptionsWidth)
                             .requiredHeight(maxHeight + LegacyEditorHeaderHeight)
                             .offset(y = -LegacyEditorHeaderHeight)
                     ) {

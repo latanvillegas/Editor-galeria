@@ -11,10 +11,9 @@ import com.hypereditor.nativegallery.ui.state.EditorUiState
 /**
  * Incremental desktop host around the proven editor implementation.
  *
- * The legacy editor remains the canvas/inspector implementation for now, which keeps
- * every existing editing path alive while the desktop chrome becomes the activity
- * entry point. Subsequent changes can extract the legacy right panel into the
- * inspector slot without replacing the rendering pipeline.
+ * The legacy editor still owns the central editing implementation while desktop
+ * panels are extracted one by one. This keeps every existing rendering path alive
+ * during the migration and avoids a big-bang rewrite.
  */
 @Composable
 fun DesktopEditorScreen(
@@ -52,6 +51,11 @@ fun DesktopEditorScreen(
                 )
             }
         },
-        inspector = { /* Legacy inspector still lives inside HyperEditorScreen. */ }
+        inspector = {
+            DesktopInspectorPanel(
+                state = state,
+                onIntent = onIntent
+            )
+        }
     )
 }

@@ -10,23 +10,59 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.hypereditor.nativegallery.ui.HyperEditorScreen
+import com.hypereditor.nativegallery.ui.canvas.EditorCanvas
+import com.hypereditor.nativegallery.ui.canvas.rememberCanvasViewportState
 import com.hypereditor.nativegallery.ui.state.EditorIntent
+import com.hypereditor.nativegallery.ui.state.EditorSectionTab
 import com.hypereditor.nativegallery.ui.state.EditorUiState
 
 /**
  * Compatibility boundary between the desktop workspace and the original editor.
  *
- * The desktop shell must not know the dimensions or layout details of the legacy
- * editor. Until the interactive canvases are extracted into standalone composables,
- * this host is the only place allowed to mount HyperEditorScreen and compensate for
- * its old header/options chrome.
- *
- * Keeping this bridge isolated makes the next extraction mechanical: replace the
- * implementation of this composable with DesktopInteractiveCanvas without touching
- * DesktopEditorScreen or DesktopWorkspaceShell.
+ * Passive desktop sections now render directly through EditorCanvas and no longer
+ * mount HyperEditorScreen. Only sections that still need specialized interactive
+ * gesture canvases remain on the legacy bridge while they are extracted one by one.
  */
 @Composable
 fun DesktopInteractiveCanvasHost(
+    state: EditorUiState,
+    onIntent: (EditorIntent) -> Unit,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    when (state.selectedTab) {
+        EditorSectionTab.ADJUSTMENTS,
+        EditorSectionTab.FILTERS_PRESETS,
+        EditorSectionTab.LAYERS -> DesktopNativePreviewCanvas(state, modifier)
+
+        EditorSectionTab.GEOMETRY_CROP,
+        EditorSectionTab.CREATIVE_TOOLS,
+        EditorSectionTab.MASKS_SELECTIONS -> LegacyInteractiveCanvasBridge(
+            state = state,
+            onIntent = onIntent,
+            onClose = onClose,
+            modifier = modifier
+        )
+    }
+}
+
+@Composable
+private fun DesktopNativePreviewCanvas(state: EditorUiState, modifier: Modifier = Modifier) {
+    val viewportState = rememberCanvasViewportState()
+    val bitmap = if (state.isComparingOriginal) {
+        state.originalBitmap
+    } else {
+        state.previewBitmap ?: state.originalBitmap
+    }
+    EditorCanvas(
+        bitmap = bitmap,
+        viewportState = viewportState,
+        modifier = modifier.fillMaxSize()
+    )
+}
+
+@Composable
+private fun LegacyInteractiveCanvasBridge(
     state: EditorUiState,
     onIntent: (EditorIntent) -> Unit,
     onClose: () -> Unit,

@@ -13,17 +13,17 @@ import com.hypereditor.nativegallery.ui.state.EditorSectionTab
 import com.hypereditor.nativegallery.ui.state.EditorUiState
 
 @Composable
-fun DesktopInteractiveCanvasHost(state: EditorUiState, onIntent: (EditorIntent) -> Unit, onClose: () -> Unit, modifier: Modifier = Modifier) {
+fun DesktopInteractiveCanvasHost(state: EditorUiState, onIntent: (EditorIntent) -> Unit, viewportState: CanvasViewportState, modifier: Modifier = Modifier) {
     when (state.selectedTab) {
-        EditorSectionTab.ADJUSTMENTS, EditorSectionTab.FILTERS_PRESETS, EditorSectionTab.LAYERS -> DesktopNativePreviewCanvas(state, modifier)
+        EditorSectionTab.ADJUSTMENTS, EditorSectionTab.FILTERS_PRESETS, EditorSectionTab.LAYERS -> DesktopNativePreviewCanvas(state, viewportState, modifier)
         EditorSectionTab.GEOMETRY_CROP -> DesktopNativeCropCanvas(state, onIntent, modifier)
         EditorSectionTab.MASKS_SELECTIONS -> DesktopNativeMaskCanvas(state, onIntent, modifier)
         EditorSectionTab.CREATIVE_TOOLS -> DesktopNativeCreativeCanvas(state, onIntent, modifier)
     }
 }
 
-@Composable private fun DesktopNativePreviewCanvas(state: EditorUiState, modifier: Modifier = Modifier) {
-    val viewportState = rememberCanvasViewportState(); val bitmap = if (state.isComparingOriginal) state.originalBitmap else state.previewBitmap ?: state.originalBitmap
+@Composable private fun DesktopNativePreviewCanvas(state: EditorUiState, viewportState: CanvasViewportState, modifier: Modifier = Modifier) {
+    val bitmap = if (state.isComparingOriginal) state.originalBitmap else state.previewBitmap ?: state.originalBitmap
     EditorCanvas(bitmap = bitmap, viewportState = viewportState, modifier = modifier.fillMaxSize())
 }
 

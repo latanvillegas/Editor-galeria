@@ -12,15 +12,15 @@ data class DesktopToolTarget(
 )
 
 fun DesktopTool.target(): DesktopToolTarget = when (this) {
-    DesktopTool.MOVE -> DesktopToolTarget(EditorSectionTab.BASIC_ADJUSTMENTS)
+    DesktopTool.MOVE -> DesktopToolTarget(EditorSectionTab.ADJUSTMENTS)
     DesktopTool.SELECT -> DesktopToolTarget(EditorSectionTab.MASKS_SELECTIONS)
     DesktopTool.CROP -> DesktopToolTarget(EditorSectionTab.GEOMETRY_CROP)
     DesktopTool.BRUSH -> DesktopToolTarget(EditorSectionTab.CREATIVE_TOOLS, creativeToolIndex = 0)
     DesktopTool.TEXT -> DesktopToolTarget(EditorSectionTab.CREATIVE_TOOLS, creativeToolIndex = 1)
     DesktopTool.CLONE -> DesktopToolTarget(EditorSectionTab.CREATIVE_TOOLS, creativeToolIndex = 2)
     DesktopTool.HEAL -> DesktopToolTarget(EditorSectionTab.CREATIVE_TOOLS, creativeToolIndex = 3)
-    DesktopTool.HAND -> DesktopToolTarget(EditorSectionTab.BASIC_ADJUSTMENTS)
-    DesktopTool.ZOOM -> DesktopToolTarget(EditorSectionTab.BASIC_ADJUSTMENTS)
+    DesktopTool.HAND -> DesktopToolTarget(EditorSectionTab.ADJUSTMENTS)
+    DesktopTool.ZOOM -> DesktopToolTarget(EditorSectionTab.ADJUSTMENTS)
 }
 
 fun desktopToolFor(tab: EditorSectionTab, creativeToolIndex: Int): DesktopTool = when {

@@ -10,6 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,7 +43,7 @@ fun DesktopCanvasStage(
         }
         HorizontalDivider(color = Color(0xFF3A3A3A))
         Box(
-            modifier = Modifier.weight(1f).fillMaxWidth().background(Color(0xFF151515)),
+            modifier = Modifier.weight(1f).fillMaxWidth().clipToBounds().background(Color(0xFF151515)),
             contentAlignment = Alignment.Center,
             content = content
         )

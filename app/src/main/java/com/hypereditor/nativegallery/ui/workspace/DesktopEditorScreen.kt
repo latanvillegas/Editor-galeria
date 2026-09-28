@@ -50,15 +50,18 @@ fun DesktopEditorScreen(
                 modifier = Modifier.weight(1f).fillMaxSize()
             ) {
                 BoxWithConstraints(Modifier.fillMaxSize()) {
-                    HyperEditorScreen(
-                        state = state,
-                        onIntent = onIntent,
-                        onClose = onClose,
-                        modifier = Modifier
+                    Box(
+                        Modifier
                             .fillMaxWidth()
                             .requiredHeight(maxHeight + LegacyEditorHeaderHeight)
                             .offset(y = -LegacyEditorHeaderHeight)
-                    )
+                    ) {
+                        HyperEditorScreen(
+                            state = state,
+                            onIntent = onIntent,
+                            onClose = onClose
+                        )
+                    }
                 }
             }
         },

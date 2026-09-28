@@ -16,29 +16,18 @@ import androidx.compose.ui.unit.sp
 import com.hypereditor.nativegallery.ui.state.EditorIntent
 import com.hypereditor.nativegallery.ui.state.EditorUiState
 
-enum class DesktopCreativeTool(val label: String) {
-    BRUSH("Pincel"), TEXT("Texto"), CLONE("Clonar"), HEALING("Healing"), PATCH("Patch"), PORTRAIT_LIGHT("Luz retrato"), FACIAL_RELIGHT("Relight")
-}
+enum class DesktopCreativeTool(val label: String) { BRUSH("Pincel"), TEXT("Texto"), CLONE("Clonar"), HEALING("Healing"), PATCH("Patch"), PORTRAIT_LIGHT("Luz retrato"), FACIAL_RELIGHT("Relight") }
 
 @Composable
-fun DesktopCreativePanel(
-    state: EditorUiState,
-    onIntent: (EditorIntent) -> Unit,
-    modifier: Modifier = Modifier,
-    selected: DesktopCreativeTool = DesktopCreativeTool.BRUSH,
-    onSelected: (DesktopCreativeTool) -> Unit = {}
-) {
+fun DesktopCreativePanel(state: EditorUiState, onIntent: (EditorIntent) -> Unit, modifier: Modifier = Modifier) {
+    val selection = LocalDesktopCreativeSelection.current
+    val selected = selection.selected
     val doc = state.document
     Column(modifier.verticalScroll(rememberScrollState()).padding(12.dp)) {
-        Text("HERRAMIENTAS CREATIVAS", color = Color(0xFF929292), fontSize = 9.sp)
-        Spacer(Modifier.height(8.dp))
+        Text("HERRAMIENTAS CREATIVAS", color = Color(0xFF929292), fontSize = 9.sp); Spacer(Modifier.height(8.dp))
         DesktopCreativeTool.entries.chunked(2).forEach { row ->
             Row(Modifier.fillMaxWidth().padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                row.forEach { tool ->
-                    Surface(modifier = Modifier.weight(1f).height(38.dp).clickable { onSelected(tool) }, shape = RoundedCornerShape(4.dp), color = if (selected == tool) Color(0xFF3B5F85) else Color(0xFF303030)) {
-                        Box(contentAlignment = Alignment.Center) { Text(tool.label, color = Color(0xFFE5E5E5), fontSize = 9.sp) }
-                    }
-                }
+                row.forEach { tool -> Surface(modifier = Modifier.weight(1f).height(38.dp).clickable { selection.selected = tool }, shape = RoundedCornerShape(4.dp), color = if (selected == tool) Color(0xFF3B5F85) else Color(0xFF303030)) { Box(contentAlignment = Alignment.Center) { Text(tool.label, color = Color(0xFFE5E5E5), fontSize = 9.sp) } } }
                 if (row.size == 1) Spacer(Modifier.weight(1f))
             }
         }
@@ -55,9 +44,7 @@ fun DesktopCreativePanel(
     }
 }
 
-@Composable private fun ToolStatus(title: String, count: String, clearLabel: String, onClear: () -> Unit) {
-    Text(title.uppercase(), color = Color(0xFFBDBDBD), fontSize = 9.sp); Text(count, color = Color(0xFF888888), fontSize = 10.sp, modifier = Modifier.padding(vertical = 8.dp)); Text("La interacción se realiza directamente sobre el canvas central.", color = Color(0xFF929292), fontSize = 10.sp, lineHeight = 15.sp); Spacer(Modifier.height(10.dp)); OutlinedButton(onClick = onClear, modifier = Modifier.fillMaxWidth()) { Text(clearLabel, fontSize = 9.sp) }
-}
+@Composable private fun ToolStatus(title: String, count: String, clearLabel: String, onClear: () -> Unit) { Text(title.uppercase(), color = Color(0xFFBDBDBD), fontSize = 9.sp); Text(count, color = Color(0xFF888888), fontSize = 10.sp, modifier = Modifier.padding(vertical = 8.dp)); Text("La interacción se realiza directamente sobre el canvas central.", color = Color(0xFF929292), fontSize = 10.sp, lineHeight = 15.sp); Spacer(Modifier.height(10.dp)); OutlinedButton(onClick = onClear, modifier = Modifier.fillMaxWidth()) { Text(clearLabel, fontSize = 9.sp) } }
 
 @Composable private fun TextTool(state: EditorUiState, onIntent: (EditorIntent) -> Unit) {
     var text by remember { mutableStateOf("") }; Text("TEXTO", color = Color(0xFFBDBDBD), fontSize = 9.sp); Spacer(Modifier.height(7.dp)); OutlinedTextField(value = text, onValueChange = { text = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Contenido") }, singleLine = true); Spacer(Modifier.height(7.dp)); Button(onClick = { onIntent(EditorIntent.AddTextOverlay(text = text)); text = "" }, enabled = text.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("Añadir texto", fontSize = 10.sp) }

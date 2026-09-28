@@ -51,6 +51,7 @@ private fun PropertiesContent(state: EditorUiState, onIntent: (EditorIntent) -> 
             EditorSectionTab.ADJUSTMENTS -> DesktopAdjustmentsPanel(state, onIntent, Modifier.fillMaxSize())
             EditorSectionTab.GEOMETRY_CROP -> DesktopGeometryPanel(state, onIntent, Modifier.fillMaxSize())
             EditorSectionTab.FILTERS_PRESETS -> DesktopFiltersPanel(state, onIntent, Modifier.fillMaxSize())
+            EditorSectionTab.CREATIVE_TOOLS -> DesktopCreativePanel(state, onIntent, Modifier.fillMaxSize())
             EditorSectionTab.MASKS_SELECTIONS -> DesktopMasksPanel(state, onIntent, Modifier.fillMaxSize())
             else -> ContextPlaceholder(title, onIntent)
         }

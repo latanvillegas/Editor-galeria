@@ -10,9 +10,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.hypereditor.nativegallery.domain.model.EditOperation
+import com.hypereditor.nativegallery.domain.model.SelectionMode
 import com.hypereditor.nativegallery.ui.HyperEditorScreen
 import com.hypereditor.nativegallery.ui.canvas.CropInteractiveCanvas
 import com.hypereditor.nativegallery.ui.canvas.EditorCanvas
+import com.hypereditor.nativegallery.ui.canvas.MaskSelectionInteractiveCanvas
 import com.hypereditor.nativegallery.ui.canvas.rememberCanvasViewportState
 import com.hypereditor.nativegallery.ui.canvas.rememberCropUiState
 import com.hypereditor.nativegallery.ui.state.EditorIntent
@@ -22,8 +24,8 @@ import com.hypereditor.nativegallery.ui.state.EditorUiState
 /**
  * Compatibility boundary between the desktop workspace and the original editor.
  *
- * Passive sections and geometry now render directly through standalone canvas
- * composables. Only creative tools and masks still require the legacy bridge.
+ * Preview, geometry and mask-selection sections now use standalone native canvas
+ * composables. Only creative tools still require the legacy HyperEditorScreen bridge.
  */
 @Composable
 fun DesktopInteractiveCanvasHost(
@@ -38,9 +40,9 @@ fun DesktopInteractiveCanvasHost(
         EditorSectionTab.LAYERS -> DesktopNativePreviewCanvas(state, modifier)
 
         EditorSectionTab.GEOMETRY_CROP -> DesktopNativeCropCanvas(state, onIntent, modifier)
+        EditorSectionTab.MASKS_SELECTIONS -> DesktopNativeMaskCanvas(state, onIntent, modifier)
 
-        EditorSectionTab.CREATIVE_TOOLS,
-        EditorSectionTab.MASKS_SELECTIONS -> LegacyInteractiveCanvasBridge(
+        EditorSectionTab.CREATIVE_TOOLS -> LegacyInteractiveCanvasBridge(
             state = state,
             onIntent = onIntent,
             onClose = onClose,
@@ -75,6 +77,39 @@ private fun DesktopNativeCropCanvas(
         onCropTransformChanged = { onIntent(EditorIntent.UpdateCropTransform(it)) },
         onInteractionStart = { onIntent(EditorIntent.BeginCropInteraction) },
         onInteractionEnd = { onIntent(EditorIntent.CommitCropTransform("Recorte interactivo desktop")) },
+        modifier = modifier.fillMaxSize()
+    )
+}
+
+@Composable
+private fun DesktopNativeMaskCanvas(
+    state: EditorUiState,
+    onIntent: (EditorIntent) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val masks = state.document?.masks.orEmpty()
+    val activeMask = masks.firstOrNull { it.id == state.activeMaskId } ?: masks.firstOrNull()
+    var brushSizeNorm by remember { mutableFloatStateOf(0.05f) }
+    var isEraserMode by remember { mutableStateOf(false) }
+    val bitmap = if (state.isComparingOriginal) state.originalBitmap else state.previewBitmap ?: state.originalBitmap
+
+    MaskSelectionInteractiveCanvas(
+        bitmap = bitmap,
+        activeMask = activeMask,
+        onUpdateRectBounds = { bounds -> activeMask?.let { onIntent(EditorIntent.UpdateMaskRectBounds(it.id, bounds)) } },
+        onUpdateEllipseBounds = { bounds -> activeMask?.let { onIntent(EditorIntent.UpdateMaskEllipseBounds(it.id, bounds)) } },
+        onUpdateLassoPoints = { points -> activeMask?.let { onIntent(EditorIntent.UpdateMaskLassoPoints(it.id, points)) } },
+        onAddBrushStroke = { stroke -> activeMask?.let { onIntent(EditorIntent.AddMaskBrushStroke(it.id, stroke)) } },
+        onClearSelection = { activeMask?.let { onIntent(EditorIntent.ClearMask(it.id)) } },
+        onToggleSelectionMode = {
+            activeMask?.let {
+                val mode = if (it.selectionMode == SelectionMode.ADD) SelectionMode.SUBTRACT else SelectionMode.ADD
+                onIntent(EditorIntent.UpdateMaskSelectionMode(it.id, mode))
+            }
+        },
+        brushSizeNorm = brushSizeNorm,
+        isEraserMode = isEraserMode,
+        onToggleEraserMode = { isEraserMode = !isEraserMode },
         modifier = modifier.fillMaxSize()
     )
 }

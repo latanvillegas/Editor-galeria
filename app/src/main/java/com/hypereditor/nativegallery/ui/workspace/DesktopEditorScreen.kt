@@ -1,18 +1,21 @@
 package com.hypereditor.nativegallery.ui.workspace
 
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.hypereditor.nativegallery.ui.HyperEditorScreen
 import com.hypereditor.nativegallery.ui.state.EditorIntent
 import com.hypereditor.nativegallery.ui.state.EditorUiState
 
+private val LegacyEditorHeaderHeight = 56.dp
+
 /**
  * Incremental desktop host around the proven editor implementation.
  *
- * The central document now has an explicit DesktopCanvasStage boundary. The legacy
- * editor is temporarily mounted inside it while its interactive canvases are moved
- * behind that boundary one by one, preserving all existing editing paths.
+ * Desktop chrome owns close/undo/redo/save, so the legacy 56dp editor header is
+ * clipped out here. The legacy editor remains mounted below that boundary while
+ * its interactive canvases and option panels are extracted incrementally.
  */
 @Composable
 fun DesktopEditorScreen(
@@ -46,11 +49,17 @@ fun DesktopEditorScreen(
                 documentSize = documentSize,
                 modifier = Modifier.weight(1f).fillMaxSize()
             ) {
-                HyperEditorScreen(
-                    state = state,
-                    onIntent = onIntent,
-                    onClose = onClose
-                )
+                BoxWithConstraints(Modifier.fillMaxSize()) {
+                    HyperEditorScreen(
+                        state = state,
+                        onIntent = onIntent,
+                        onClose = onClose,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .requiredHeight(maxHeight + LegacyEditorHeaderHeight)
+                            .offset(y = -LegacyEditorHeaderHeight)
+                    )
+                }
             }
         },
         inspector = {

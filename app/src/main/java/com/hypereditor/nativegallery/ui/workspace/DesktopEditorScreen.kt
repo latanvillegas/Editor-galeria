@@ -70,7 +70,12 @@ fun DesktopEditorScreen(state: EditorUiState, onIntent: (EditorIntent) -> Unit, 
                 }
             },
             canvas = {
-                DesktopCanvasStage(documentSize = documentSize, modifier = Modifier.fillMaxSize()) {
+                DesktopCanvasStage(
+                    documentSize = documentSize,
+                    activeTool = selectedTool,
+                    zoomPercent = viewportState.zoomPercentage,
+                    modifier = Modifier.fillMaxSize()
+                ) {
                     DesktopInteractiveCanvasHost(state = state, onIntent = onIntent, viewportState = viewportState, modifier = Modifier.fillMaxSize())
                 }
             },

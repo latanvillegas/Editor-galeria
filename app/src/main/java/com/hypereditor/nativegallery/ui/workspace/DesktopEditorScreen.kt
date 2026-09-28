@@ -41,6 +41,9 @@ fun DesktopEditorScreen(state: EditorUiState, onIntent: (EditorIntent) -> Unit, 
             onRedo = { onIntent(EditorIntent.Redo) },
             onSave = { onIntent(EditorIntent.SaveAndExport()) },
             onClose = onClose,
+            onZoomOut = { zoomBy(1f / 1.15f) },
+            onZoomIn = { zoomBy(1.15f) },
+            onResetView = { viewportState.reset() },
             modifier = Modifier.focusRequester(focusRequester).focusable().onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 val ctrl = event.isCtrlPressed

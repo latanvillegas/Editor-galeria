@@ -1,7 +1,6 @@
 package com.hypereditor.nativegallery.ui.workspace
 
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.weight
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import com.hypereditor.nativegallery.ui.state.EditorIntent
@@ -45,7 +44,7 @@ fun DesktopEditorScreen(
         canvas = {
             DesktopCanvasStage(
                 documentSize = documentSize,
-                modifier = Modifier.weight(1f).fillMaxSize()
+                modifier = Modifier.fillMaxSize()
             ) {
                 DesktopInteractiveCanvasHost(
                     state = state,

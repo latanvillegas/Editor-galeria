@@ -1,23 +1,19 @@
 package com.hypereditor.nativegallery.ui.workspace
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.weight
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import com.hypereditor.nativegallery.ui.HyperEditorScreen
 import com.hypereditor.nativegallery.ui.state.EditorIntent
 import com.hypereditor.nativegallery.ui.state.EditorUiState
 
-private val LegacyEditorHeaderHeight = 56.dp
-private val LegacyEditorOptionsWidth = 360.dp
-
 /**
- * Incremental desktop host around the proven editor implementation.
+ * Desktop editor composition root.
  *
- * Desktop chrome owns close/undo/redo/save and the desktop inspector now owns the
- * migrated option panels. We therefore crop the legacy 56dp header and the legacy
- * right-side options panel while keeping the proven interactive canvas mounted.
- * This removes duplicated UI without rewriting the gesture/rendering engine.
+ * This screen now depends only on the desktop workspace contracts. The compatibility
+ * details required by the original HyperEditorScreen live behind
+ * DesktopInteractiveCanvasHost and can be removed independently when the interactive
+ * canvases finish their extraction.
  */
 @Composable
 fun DesktopEditorScreen(
@@ -51,24 +47,12 @@ fun DesktopEditorScreen(
                 documentSize = documentSize,
                 modifier = Modifier.weight(1f).fillMaxSize()
             ) {
-                BoxWithConstraints(Modifier.fillMaxSize()) {
-                    // HyperEditorScreen still lays out its interactive canvas beside a
-                    // legacy fixed-width options panel. Give it that extra width, then
-                    // clip the panel outside this desktop stage. The canvas receives the
-                    // full visible width and keeps all existing gesture behavior.
-                    Box(
-                        Modifier
-                            .requiredWidth(maxWidth + LegacyEditorOptionsWidth)
-                            .requiredHeight(maxHeight + LegacyEditorHeaderHeight)
-                            .offset(y = -LegacyEditorHeaderHeight)
-                    ) {
-                        HyperEditorScreen(
-                            state = state,
-                            onIntent = onIntent,
-                            onClose = onClose
-                        )
-                    }
-                }
+                DesktopInteractiveCanvasHost(
+                    state = state,
+                    onIntent = onIntent,
+                    onClose = onClose,
+                    modifier = Modifier.fillMaxSize()
+                )
             }
         },
         inspector = {

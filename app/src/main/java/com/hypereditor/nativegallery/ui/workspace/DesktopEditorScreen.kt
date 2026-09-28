@@ -1,6 +1,5 @@
 package com.hypereditor.nativegallery.ui.workspace
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -11,9 +10,9 @@ import com.hypereditor.nativegallery.ui.state.EditorUiState
 /**
  * Incremental desktop host around the proven editor implementation.
  *
- * The legacy editor still owns the central editing implementation while desktop
- * panels are extracted one by one. This keeps every existing rendering path alive
- * during the migration and avoids a big-bang rewrite.
+ * The central document now has an explicit DesktopCanvasStage boundary. The legacy
+ * editor is temporarily mounted inside it while its interactive canvases are moved
+ * behind that boundary one by one, preserving all existing editing paths.
  */
 @Composable
 fun DesktopEditorScreen(
@@ -43,7 +42,10 @@ fun DesktopEditorScreen(
         onSave = { onIntent(EditorIntent.SaveAndExport()) },
         onClose = onClose,
         canvas = {
-            Box(Modifier.weight(1f).fillMaxSize()) {
+            DesktopCanvasStage(
+                documentSize = documentSize,
+                modifier = Modifier.weight(1f).fillMaxSize()
+            ) {
                 HyperEditorScreen(
                     state = state,
                     onIntent = onIntent,

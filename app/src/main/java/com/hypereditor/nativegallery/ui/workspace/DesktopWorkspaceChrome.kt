@@ -39,6 +39,11 @@ enum class DesktopTool(val label: String, val shortcut: String, val icon: ImageV
                 IconButton(onClick = { brush.adjustSize(2f) }, modifier = Modifier.size(26.dp)) { Icon(Icons.Default.Add, "Aumentar pincel", tint = Color(0xFFD0D0D0), modifier = Modifier.size(14.dp)) }
                 Spacer(Modifier.width(12.dp)); Text("Opacidad ${(brush.opacity * 100).toInt()}%", color = Color(0xFFB8B8B8), fontSize = 11.sp)
                 Slider(value = brush.opacity, onValueChange = { brush.opacity = it }, valueRange = 0.05f..1f, modifier = Modifier.width(110.dp))
+                Spacer(Modifier.width(8.dp))
+                TextButton(onClick = { brush.toggleEraser() }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
+                    Icon(Icons.Default.AutoFixOff, null, tint = if (brush.isEraser) Color(0xFFB9D9FF) else Color(0xFFB8B8B8), modifier = Modifier.size(15.dp))
+                    Spacer(Modifier.width(4.dp)); Text(if (brush.isEraser) "Borrador ON" else "Borrador", color = if (brush.isEraser) Color(0xFFB9D9FF) else Color(0xFFB8B8B8), fontSize = 11.sp)
+                }
             } else {
                 Spacer(Modifier.width(16.dp)); Text("•", color = Color(0xFF666666), fontSize = 11.sp); Spacer(Modifier.width(16.dp)); Text(toolHint(activeTool), color = Color(0xFFB8B8B8), fontSize = 11.sp)
             }

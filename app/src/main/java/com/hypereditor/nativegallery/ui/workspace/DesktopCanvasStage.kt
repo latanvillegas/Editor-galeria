@@ -14,8 +14,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.awaitPointerEventScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -41,31 +39,14 @@ fun DesktopCanvasStage(
         }
         DesktopTool.ZOOM -> Modifier.pointerInput(viewportState) {
             detectTapGestures(
-                onTap = { viewportState.zoom = (viewportState.zoom * 1.25f).coerceIn(viewportState.minZoom, viewportState.maxZoom) },
+                onTap = {
+                    viewportState.zoom = (viewportState.zoom * 1.25f)
+                        .coerceIn(viewportState.minZoom, viewportState.maxZoom)
+                },
                 onDoubleTap = { viewportState.reset() }
             )
         }
         else -> Modifier
-    }
-
-    val wheelModifier = Modifier.pointerInput(viewportState) {
-        awaitPointerEventScope {
-            while (true) {
-                val event = awaitPointerEvent()
-                if (event.type != PointerEventType.Scroll) continue
-                val change = event.changes.firstOrNull() ?: continue
-                val delta = change.scrollDelta
-                if (delta.y != 0f) {
-                    val factor = if (delta.y < 0f) 1.12f else 1f / 1.12f
-                    viewportState.zoom = (viewportState.zoom * factor)
-                        .coerceIn(viewportState.minZoom, viewportState.maxZoom)
-                    change.consume()
-                } else if (delta.x != 0f) {
-                    viewportState.panX -= delta.x * 28f
-                    change.consume()
-                }
-            }
-        }
     }
 
     Column(modifier.fillMaxSize().background(Color(0xFF181818))) {
@@ -90,7 +71,6 @@ fun DesktopCanvasStage(
                 .fillMaxWidth()
                 .clipToBounds()
                 .background(Color(0xFF151515))
-                .then(wheelModifier)
                 .then(navigationModifier),
             contentAlignment = Alignment.Center,
             content = content

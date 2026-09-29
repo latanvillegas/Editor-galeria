@@ -41,9 +41,7 @@ fun DesktopEditorScreen(state: EditorUiState, onIntent: (EditorIntent) -> Unit, 
             modifier = Modifier.focusRequester(focusRequester).focusable().onPreviewKeyEvent { event ->
                 if (event.key == Key.Spacebar) { isSpaceHandActive = event.type == KeyEventType.KeyDown; return@onPreviewKeyEvent true }
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                val ctrl = event.isCtrlPressed
-                val shift = event.isShiftPressed
-                val alt = event.isAltPressed
+                val ctrl = event.isCtrlPressed; val shift = event.isShiftPressed; val alt = event.isAltPressed
                 when {
                     ctrl && event.key == Key.Z && shift -> { if (state.canRedo) onIntent(EditorIntent.Redo); true }
                     ctrl && event.key == Key.Z -> { if (state.canUndo) onIntent(EditorIntent.Undo); true }
@@ -54,6 +52,8 @@ fun DesktopEditorScreen(state: EditorUiState, onIntent: (EditorIntent) -> Unit, 
                     ctrl && event.key == Key.Zero -> { viewportState.reset(); true }
                     event.key == Key.X -> { colorState.swap(); true }
                     event.key == Key.D -> { colorState.reset(); true }
+                    event.key == Key.LeftBracket && selectedTool == DesktopTool.BRUSH && ctrl && shift -> { brushState.adjustSmoothing(-0.05f); true }
+                    event.key == Key.RightBracket && selectedTool == DesktopTool.BRUSH && ctrl && shift -> { brushState.adjustSmoothing(0.05f); true }
                     event.key == Key.LeftBracket && selectedTool == DesktopTool.BRUSH && ctrl -> { brushState.adjustFlow(-0.1f); true }
                     event.key == Key.RightBracket && selectedTool == DesktopTool.BRUSH && ctrl -> { brushState.adjustFlow(0.1f); true }
                     event.key == Key.LeftBracket && selectedTool == DesktopTool.BRUSH && alt -> { brushState.adjustHardness(-0.1f); true }

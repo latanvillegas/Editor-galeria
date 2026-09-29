@@ -17,6 +17,7 @@ fun DesktopEditorScreen(state: EditorUiState, onIntent: (EditorIntent) -> Unit, 
     var isSpaceHandActive by remember { mutableStateOf(false) }
     val creativeSelection = remember { DesktopCreativeSelectionState() }
     val colorState = remember { DesktopColorState() }
+    val brushState = remember { DesktopBrushState() }
     val viewportState = rememberCanvasViewportState()
     val focusRequester = remember { FocusRequester() }
     val documentSize = state.originalBitmap?.let { "${it.width} × ${it.height} px" }
@@ -33,7 +34,8 @@ fun DesktopEditorScreen(state: EditorUiState, onIntent: (EditorIntent) -> Unit, 
 
     CompositionLocalProvider(
         LocalDesktopCreativeSelection provides creativeSelection,
-        LocalDesktopColorState provides colorState
+        LocalDesktopColorState provides colorState,
+        LocalDesktopBrushState provides brushState
     ) {
         DesktopWorkspaceShell(
             selectedTool = effectiveTool,
@@ -64,6 +66,8 @@ fun DesktopEditorScreen(state: EditorUiState, onIntent: (EditorIntent) -> Unit, 
                     ctrl && event.key == Key.Zero -> { viewportState.reset(); true }
                     event.key == Key.X -> { colorState.swap(); true }
                     event.key == Key.D -> { colorState.reset(); true }
+                    event.key == Key.LeftBracket && selectedTool == DesktopTool.BRUSH -> { brushState.adjustSize(-2f); true }
+                    event.key == Key.RightBracket && selectedTool == DesktopTool.BRUSH -> { brushState.adjustSize(2f); true }
                     event.key == Key.DirectionLeft && effectiveTool == DesktopTool.HAND -> { viewportState.panX += 32f; true }
                     event.key == Key.DirectionRight && effectiveTool == DesktopTool.HAND -> { viewportState.panX -= 32f; true }
                     event.key == Key.DirectionUp && effectiveTool == DesktopTool.HAND -> { viewportState.panY += 32f; true }

@@ -3,7 +3,9 @@ package com.hypereditor.nativegallery.ui.workspace
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Redo
@@ -26,17 +28,19 @@ enum class DesktopTool(val label: String, val shortcut: String, val icon: ImageV
 
 @Composable fun DesktopToolOptionsBar(activeTool: DesktopTool, documentSize: String?, modifier: Modifier = Modifier) {
     Surface(modifier = modifier.fillMaxWidth().height(38.dp), color = Color(0xFF2D2D2D), border = BorderStroke(1.dp, Color(0xFF3B3B3B))) {
-        Row(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(activeTool.icon, null, tint = Color(0xFFE0E0E0), modifier = Modifier.size(17.dp)); Spacer(Modifier.width(8.dp)); Text(activeTool.label, color = Color.White, fontSize = 12.sp); Spacer(Modifier.width(12.dp)); Text("[${activeTool.shortcut}]", color = Color(0xFFAAAAAA), fontSize = 11.sp)
-            if (activeTool == DesktopTool.BRUSH) {
-                val brush = LocalDesktopBrushState.current; var presetsOpen by remember { mutableStateOf(false) }; Spacer(Modifier.width(10.dp))
-                Box { TextButton(onClick = { presetsOpen = true }, contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)) { Text("${brush.activePresetLabel} ▾", color = Color(0xFFD8D8D8), fontSize = 11.sp) }; DropdownMenu(expanded = presetsOpen, onDismissRequest = { presetsOpen = false }) { brush.presets.forEach { preset -> DropdownMenuItem(text = { Text("${preset.label}  ${preset.size.toInt()} px · Op ${(preset.opacity * 100).toInt()}% · D ${(preset.hardness * 100).toInt()}% · F ${(preset.flow * 100).toInt()}% · S ${(preset.smoothing * 100).toInt()}%") }, onClick = { brush.applyPreset(preset); presetsOpen = false }) } } }
-                Spacer(Modifier.width(6.dp)); Text("${brush.size.toInt()} px", color = Color.White, fontSize = 11.sp)
-                IconButton(onClick = { brush.adjustSize(-2f) }, modifier = Modifier.size(24.dp)) { Icon(Icons.Default.Remove, "Reducir pincel", tint = Color(0xFFD0D0D0), modifier = Modifier.size(13.dp)) }; IconButton(onClick = { brush.adjustSize(2f) }, modifier = Modifier.size(24.dp)) { Icon(Icons.Default.Add, "Aumentar pincel", tint = Color(0xFFD0D0D0), modifier = Modifier.size(13.dp)) }
-                BrushPercentControl("Op", brush.opacity, 0.05f, 1f, brush::setOpacity); BrushPercentControl("Dur", brush.hardness, 0f, 1f, brush::setHardness); BrushPercentControl("Flujo", brush.flow, 0.05f, 1f, brush::setFlow); BrushPercentControl("Suav", brush.smoothing, 0f, 0.9f, brush::setSmoothing)
-                Spacer(Modifier.width(4.dp)); TextButton(onClick = { brush.toggleEraser() }, contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp)) { Icon(Icons.Default.AutoFixOff, null, tint = if (brush.isEraser) Color(0xFFB9D9FF) else Color(0xFFB8B8B8), modifier = Modifier.size(14.dp)); Spacer(Modifier.width(3.dp)); Text(if (brush.isEraser) "Borrador ON" else "Borrador", color = if (brush.isEraser) Color(0xFFB9D9FF) else Color(0xFFB8B8B8), fontSize = 10.sp) }
-            } else { Spacer(Modifier.width(16.dp)); Text("•", color = Color(0xFF666666), fontSize = 11.sp); Spacer(Modifier.width(16.dp)); Text(toolHint(activeTool), color = Color(0xFFB8B8B8), fontSize = 11.sp) }
-            Spacer(Modifier.weight(1f)); documentSize?.let { Text(it, color = Color(0xFFAAAAAA), fontSize = 11.sp) }
+        Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(activeTool.icon, null, tint = Color(0xFFE0E0E0), modifier = Modifier.size(17.dp)); Spacer(Modifier.width(8.dp)); Text(activeTool.label, color = Color.White, fontSize = 12.sp); Spacer(Modifier.width(12.dp)); Text("[${activeTool.shortcut}]", color = Color(0xFFAAAAAA), fontSize = 11.sp)
+                if (activeTool == DesktopTool.BRUSH) {
+                    val brush = LocalDesktopBrushState.current; var presetsOpen by remember { mutableStateOf(false) }; Spacer(Modifier.width(10.dp))
+                    Box { TextButton(onClick = { presetsOpen = true }, contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)) { Text("${brush.activePresetLabel} ▾", color = Color(0xFFD8D8D8), fontSize = 11.sp) }; DropdownMenu(expanded = presetsOpen, onDismissRequest = { presetsOpen = false }) { brush.presets.forEach { preset -> DropdownMenuItem(text = { Text("${preset.label}  ${preset.size.toInt()} px · Op ${(preset.opacity * 100).toInt()}% · D ${(preset.hardness * 100).toInt()}% · F ${(preset.flow * 100).toInt()}% · S ${(preset.smoothing * 100).toInt()}%") }, onClick = { brush.applyPreset(preset); presetsOpen = false }) } } }
+                    Spacer(Modifier.width(6.dp)); Text("${brush.size.toInt()} px", color = Color.White, fontSize = 11.sp)
+                    IconButton(onClick = { brush.adjustSize(-2f) }, modifier = Modifier.size(24.dp)) { Icon(Icons.Default.Remove, "Reducir pincel", tint = Color(0xFFD0D0D0), modifier = Modifier.size(13.dp)) }; IconButton(onClick = { brush.adjustSize(2f) }, modifier = Modifier.size(24.dp)) { Icon(Icons.Default.Add, "Aumentar pincel", tint = Color(0xFFD0D0D0), modifier = Modifier.size(13.dp)) }
+                    BrushPercentControl("Op", brush.opacity, 0.05f, 1f, brush::setOpacity); BrushPercentControl("Dur", brush.hardness, 0f, 1f, brush::setHardness); BrushPercentControl("Flujo", brush.flow, 0.05f, 1f, brush::setFlow); BrushPercentControl("Suav", brush.smoothing, 0f, 0.9f, brush::setSmoothing)
+                    Spacer(Modifier.width(4.dp)); TextButton(onClick = { brush.toggleEraser() }, contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp)) { Icon(Icons.Default.AutoFixOff, null, tint = if (brush.isEraser) Color(0xFFB9D9FF) else Color(0xFFB8B8B8), modifier = Modifier.size(14.dp)); Spacer(Modifier.width(3.dp)); Text(if (brush.isEraser) "Borrador ON" else "Borrador", color = if (brush.isEraser) Color(0xFFB9D9FF) else Color(0xFFB8B8B8), fontSize = 10.sp) }
+                } else { Spacer(Modifier.width(16.dp)); Text("•", color = Color(0xFF666666), fontSize = 11.sp); Spacer(Modifier.width(16.dp)); Text(toolHint(activeTool), color = Color(0xFFB8B8B8), fontSize = 11.sp) }
+            }
+            documentSize?.let { Surface(color = Color(0xFF2D2D2D)) { Text(it, color = Color(0xFFAAAAAA), fontSize = 11.sp, modifier = Modifier.padding(horizontal = 10.dp)) } }
         }
     }
 }

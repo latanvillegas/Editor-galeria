@@ -20,15 +20,35 @@ class BrushDrawRenderStage : RenderStage {
             val hardness = stroke.hardness.coerceIn(0f, 1f)
             val flow = stroke.flow.coerceIn(0.05f, 1f)
             val effectiveAlpha = (stroke.opacity.coerceIn(0f, 1f) * flow).coerceIn(0f, 1f)
+            val pixelPoints = stroke.points.map { PointF(it.first * width, it.second * height) }
             val path = Path().apply {
-                val first = stroke.points.first(); moveTo(first.first * width, first.second * height)
-                for (i in 1 until stroke.points.size) { val pt = stroke.points[i]; lineTo(pt.first * width, pt.second * height) }
+                moveTo(pixelPoints.first().x, pixelPoints.first().y)
+                if (pixelPoints.size == 2) {
+                    lineTo(pixelPoints[1].x, pixelPoints[1].y)
+                } else {
+                    for (i in 1 until pixelPoints.lastIndex) {
+                        val current = pixelPoints[i]
+                        val next = pixelPoints[i + 1]
+                        val midX = (current.x + next.x) * 0.5f
+                        val midY = (current.y + next.y) * 0.5f
+                        quadTo(current.x, current.y, midX, midY)
+                    }
+                    lineTo(pixelPoints.last().x, pixelPoints.last().y)
+                }
             }
 
             fun paint(strokeWidth: Float, alpha: Float) = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND; this.strokeWidth = strokeWidth
-                if (stroke.isEraser) { this.alpha = (alpha * 255).toInt(); xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR) }
-                else { color = stroke.colorInt; this.alpha = (alpha * 255).toInt() }
+                style = Paint.Style.STROKE
+                strokeCap = Paint.Cap.ROUND
+                strokeJoin = Paint.Join.ROUND
+                this.strokeWidth = strokeWidth
+                if (stroke.isEraser) {
+                    this.alpha = (alpha * 255).toInt()
+                    xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
+                } else {
+                    color = stroke.colorInt
+                    this.alpha = (alpha * 255).toInt()
+                }
             }
 
             if (hardness < 0.98f) {

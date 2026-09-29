@@ -53,7 +53,7 @@ private fun DesktopNativeCreativeCanvas(state: EditorUiState, onIntent: (EditorI
     var facialZones by remember { mutableStateOf(state.document?.facialRelights?.firstOrNull()?.zones.orEmpty()) }
 
     when (tool) {
-        DesktopCreativeTool.BRUSH -> BrushInteractiveCanvas(bitmap = bitmap, brushColor = colors.foreground.toArgb(), brushSize = brush.size, brushOpacity = brush.opacity, isEraserMode = false, onApplyStroke = { onIntent(EditorIntent.AddBrushStroke(it)) }, modifier = modifier.fillMaxSize())
+        DesktopCreativeTool.BRUSH -> BrushInteractiveCanvas(bitmap = bitmap, brushColor = colors.foreground.toArgb(), brushSize = brush.size, brushOpacity = brush.opacity, isEraserMode = brush.isEraser, onApplyStroke = { onIntent(EditorIntent.AddBrushStroke(it)) }, modifier = modifier.fillMaxSize())
         DesktopCreativeTool.TEXT -> {
             val textBitmap = remember(bitmap, state.document?.textOverlays?.size) { val src = state.originalBitmap; val doc = state.document; if (src != null && doc != null && doc.textOverlays.isNotEmpty()) BitmapRenderer.renderDocument(src, doc.copy(textOverlays = emptyList()), isPreview = true) else bitmap }
             TextInteractiveCanvas(bitmap = textBitmap, textOverlays = state.document?.textOverlays.orEmpty(), selectedTextId = selectedTextId, onSelectText = { selectedTextId = it }, onUpdateText = { onIntent(EditorIntent.UpdateTextOverlay(it)) }, onDeleteText = { selectedTextId = null; onIntent(EditorIntent.DeleteTextOverlay(it)) }, modifier = modifier.fillMaxSize())

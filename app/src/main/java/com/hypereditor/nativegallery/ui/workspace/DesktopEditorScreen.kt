@@ -16,6 +16,7 @@ fun DesktopEditorScreen(state: EditorUiState, onIntent: (EditorIntent) -> Unit, 
     var selectedTool by remember(state.selectedTab) { mutableStateOf(desktopToolFor(state.selectedTab, creativeToolIndex = 0)) }
     var isSpaceHandActive by remember { mutableStateOf(false) }
     val creativeSelection = remember { DesktopCreativeSelectionState() }
+    val colorState = remember { DesktopColorState() }
     val viewportState = rememberCanvasViewportState()
     val focusRequester = remember { FocusRequester() }
     val documentSize = state.originalBitmap?.let { "${it.width} × ${it.height} px" }
@@ -30,7 +31,10 @@ fun DesktopEditorScreen(state: EditorUiState, onIntent: (EditorIntent) -> Unit, 
 
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
-    CompositionLocalProvider(LocalDesktopCreativeSelection provides creativeSelection) {
+    CompositionLocalProvider(
+        LocalDesktopCreativeSelection provides creativeSelection,
+        LocalDesktopColorState provides colorState
+    ) {
         DesktopWorkspaceShell(
             selectedTool = effectiveTool,
             onToolSelected = ::selectTool,
@@ -47,10 +51,7 @@ fun DesktopEditorScreen(state: EditorUiState, onIntent: (EditorIntent) -> Unit, 
             onZoomIn = { zoomBy(1.15f) },
             onResetView = { viewportState.reset() },
             modifier = Modifier.focusRequester(focusRequester).focusable().onPreviewKeyEvent { event ->
-                if (event.key == Key.Spacebar) {
-                    isSpaceHandActive = event.type == KeyEventType.KeyDown
-                    return@onPreviewKeyEvent true
-                }
+                if (event.key == Key.Spacebar) { isSpaceHandActive = event.type == KeyEventType.KeyDown; return@onPreviewKeyEvent true }
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 val ctrl = event.isCtrlPressed
                 when {
@@ -61,6 +62,8 @@ fun DesktopEditorScreen(state: EditorUiState, onIntent: (EditorIntent) -> Unit, 
                     ctrl && (event.key == Key.Equals || event.key == Key.NumPadAdd) -> { zoomBy(1.15f); true }
                     ctrl && (event.key == Key.Minus || event.key == Key.NumPadSubtract) -> { zoomBy(1f / 1.15f); true }
                     ctrl && event.key == Key.Zero -> { viewportState.reset(); true }
+                    event.key == Key.X -> { colorState.swap(); true }
+                    event.key == Key.D -> { colorState.reset(); true }
                     event.key == Key.DirectionLeft && effectiveTool == DesktopTool.HAND -> { viewportState.panX += 32f; true }
                     event.key == Key.DirectionRight && effectiveTool == DesktopTool.HAND -> { viewportState.panX -= 32f; true }
                     event.key == Key.DirectionUp && effectiveTool == DesktopTool.HAND -> { viewportState.panY += 32f; true }
@@ -79,13 +82,7 @@ fun DesktopEditorScreen(state: EditorUiState, onIntent: (EditorIntent) -> Unit, 
                 }
             },
             canvas = {
-                DesktopCanvasStage(
-                    documentSize = documentSize,
-                    activeTool = effectiveTool,
-                    zoomPercent = viewportState.zoomPercentage,
-                    viewportState = viewportState,
-                    modifier = Modifier.fillMaxSize()
-                ) {
+                DesktopCanvasStage(documentSize = documentSize, activeTool = effectiveTool, zoomPercent = viewportState.zoomPercentage, viewportState = viewportState, modifier = Modifier.fillMaxSize()) {
                     DesktopInteractiveCanvasHost(state = state, onIntent = onIntent, viewportState = viewportState, modifier = Modifier.fillMaxSize())
                 }
             },

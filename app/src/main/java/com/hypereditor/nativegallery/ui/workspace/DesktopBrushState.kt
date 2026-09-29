@@ -32,6 +32,7 @@ class DesktopBrushState {
     fun setFlow(value: Float) { flow = value.coerceIn(0.05f, 1f); markCustom() }
     fun adjustFlow(delta: Float) { setFlow(flow + delta) }
     fun setSmoothing(value: Float) { smoothing = value.coerceIn(0f, 0.9f); markCustom() }
+    fun adjustSmoothing(delta: Float) { setSmoothing(smoothing + delta) }
 
     fun applyPreset(preset: DesktopBrushPreset) {
         size = preset.size; opacity = preset.opacity; hardness = preset.hardness; flow = preset.flow; smoothing = preset.smoothing

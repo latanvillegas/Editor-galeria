@@ -34,25 +34,31 @@ enum class DesktopTool(val label: String, val shortcut: String, val icon: ImageV
             if (activeTool == DesktopTool.BRUSH) {
                 val brush = LocalDesktopBrushState.current
                 var presetsOpen by remember { mutableStateOf(false) }
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(10.dp))
                 Box {
-                    TextButton(onClick = { presetsOpen = true }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)) { Text("${brush.activePresetLabel} ▾", color = Color(0xFFD8D8D8), fontSize = 11.sp) }
+                    TextButton(onClick = { presetsOpen = true }, contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)) { Text("${brush.activePresetLabel} ▾", color = Color(0xFFD8D8D8), fontSize = 11.sp) }
                     DropdownMenu(expanded = presetsOpen, onDismissRequest = { presetsOpen = false }) {
-                        brush.presets.forEach { preset -> DropdownMenuItem(text = { Text("${preset.label}  ${preset.size.toInt()} px / ${(preset.opacity * 100).toInt()}%") }, onClick = { brush.applyPreset(preset); presetsOpen = false }) }
+                        brush.presets.forEach { preset -> DropdownMenuItem(text = { Text("${preset.label}  ${preset.size.toInt()} px · Op ${(preset.opacity * 100).toInt()}% · D ${(preset.hardness * 100).toInt()}% · F ${(preset.flow * 100).toInt()}%") }, onClick = { brush.applyPreset(preset); presetsOpen = false }) }
                     }
                 }
-                Spacer(Modifier.width(8.dp)); Text("Tamaño", color = Color(0xFFB8B8B8), fontSize = 11.sp)
-                IconButton(onClick = { brush.adjustSize(-2f) }, modifier = Modifier.size(26.dp)) { Icon(Icons.Default.Remove, "Reducir pincel", tint = Color(0xFFD0D0D0), modifier = Modifier.size(14.dp)) }
-                Text("${brush.size.toInt()} px", color = Color.White, fontSize = 11.sp)
-                IconButton(onClick = { brush.adjustSize(2f) }, modifier = Modifier.size(26.dp)) { Icon(Icons.Default.Add, "Aumentar pincel", tint = Color(0xFFD0D0D0), modifier = Modifier.size(14.dp)) }
-                Spacer(Modifier.width(10.dp)); Text("Op. ${(brush.opacity * 100).toInt()}%", color = Color(0xFFB8B8B8), fontSize = 11.sp)
-                Slider(value = brush.opacity, onValueChange = { brush.setOpacity(it) }, valueRange = 0.05f..1f, modifier = Modifier.width(90.dp))
-                Spacer(Modifier.width(6.dp)); TextButton(onClick = { brush.toggleEraser() }, contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)) { Icon(Icons.Default.AutoFixOff, null, tint = if (brush.isEraser) Color(0xFFB9D9FF) else Color(0xFFB8B8B8), modifier = Modifier.size(15.dp)); Spacer(Modifier.width(3.dp)); Text(if (brush.isEraser) "Borrador ON" else "Borrador", color = if (brush.isEraser) Color(0xFFB9D9FF) else Color(0xFFB8B8B8), fontSize = 11.sp) }
+                Spacer(Modifier.width(6.dp)); Text("${brush.size.toInt()} px", color = Color.White, fontSize = 11.sp)
+                IconButton(onClick = { brush.adjustSize(-2f) }, modifier = Modifier.size(24.dp)) { Icon(Icons.Default.Remove, "Reducir pincel", tint = Color(0xFFD0D0D0), modifier = Modifier.size(13.dp)) }
+                IconButton(onClick = { brush.adjustSize(2f) }, modifier = Modifier.size(24.dp)) { Icon(Icons.Default.Add, "Aumentar pincel", tint = Color(0xFFD0D0D0), modifier = Modifier.size(13.dp)) }
+                BrushPercentControl("Op", brush.opacity, 0.05f, brush::setOpacity)
+                BrushPercentControl("Dur", brush.hardness, 0f, brush::setHardness)
+                BrushPercentControl("Flujo", brush.flow, 0.05f, brush::setFlow)
+                Spacer(Modifier.width(4.dp)); TextButton(onClick = { brush.toggleEraser() }, contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp)) { Icon(Icons.Default.AutoFixOff, null, tint = if (brush.isEraser) Color(0xFFB9D9FF) else Color(0xFFB8B8B8), modifier = Modifier.size(14.dp)); Spacer(Modifier.width(3.dp)); Text(if (brush.isEraser) "Borrador ON" else "Borrador", color = if (brush.isEraser) Color(0xFFB9D9FF) else Color(0xFFB8B8B8), fontSize = 10.sp) }
             } else { Spacer(Modifier.width(16.dp)); Text("•", color = Color(0xFF666666), fontSize = 11.sp); Spacer(Modifier.width(16.dp)); Text(toolHint(activeTool), color = Color(0xFFB8B8B8), fontSize = 11.sp) }
             Spacer(Modifier.weight(1f)); documentSize?.let { Text(it, color = Color(0xFFAAAAAA), fontSize = 11.sp) }
         }
     }
 }
+
+@Composable private fun BrushPercentControl(label: String, value: Float, min: Float, onValueChange: (Float) -> Unit) {
+    Spacer(Modifier.width(6.dp)); Text("$label ${(value * 100).toInt()}%", color = Color(0xFFB8B8B8), fontSize = 10.sp)
+    Slider(value = value, onValueChange = onValueChange, valueRange = min..1f, modifier = Modifier.width(66.dp))
+}
+
 private fun toolHint(tool: DesktopTool): String = when (tool) { DesktopTool.MOVE -> "Arrastra para mover • Flechas para ajustar"; DesktopTool.SELECT -> "Crea o modifica una selección"; DesktopTool.CROP -> "Arrastra bordes y esquinas para recortar"; DesktopTool.BRUSH -> "Pinta sobre la imagen"; DesktopTool.HEAL -> "Corrige imperfecciones con pincel"; DesktopTool.CLONE -> "Clona desde una zona de origen"; DesktopTool.TEXT -> "Haz clic para añadir texto"; DesktopTool.HAND -> "Navega el lienzo • Flechas desplazan"; DesktopTool.ZOOM -> "Ctrl + / Ctrl - • Ctrl+0 restablece" }
 
 @Composable fun DesktopToolBar(selected: DesktopTool, onSelect: (DesktopTool) -> Unit, modifier: Modifier = Modifier) { Surface(modifier = modifier.width(50.dp).fillMaxHeight(), color = Color(0xFF292929), border = BorderStroke(1.dp, Color(0xFF3B3B3B))) { Column(Modifier.fillMaxSize().padding(vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) { DesktopTool.entries.forEach { tool -> val selectedColor = if (selected == tool) Color(0xFF4B4B4B) else Color.Transparent; Box(Modifier.padding(vertical = 2.dp).size(38.dp).background(selectedColor, RoundedCornerShape(4.dp)).clickable { onSelect(tool) }, contentAlignment = Alignment.Center) { Icon(tool.icon, "${tool.label} (${tool.shortcut})", tint = if (selected == tool) Color.White else Color(0xFFE5E5E5), modifier = Modifier.size(20.dp)) } }; Spacer(Modifier.weight(1f)); DesktopColorSwatches(); Spacer(Modifier.height(10.dp)) } } }

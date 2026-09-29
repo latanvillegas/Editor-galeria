@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hypereditor.nativegallery.ui.state.EditorIntent
@@ -25,12 +26,7 @@ fun DesktopCreativePanel(state: EditorUiState, onIntent: (EditorIntent) -> Unit,
     val doc = state.document
     Column(modifier.verticalScroll(rememberScrollState()).padding(12.dp)) {
         Text("HERRAMIENTAS CREATIVAS", color = Color(0xFF929292), fontSize = 9.sp); Spacer(Modifier.height(8.dp))
-        DesktopCreativeTool.entries.chunked(2).forEach { row ->
-            Row(Modifier.fillMaxWidth().padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                row.forEach { tool -> Surface(modifier = Modifier.weight(1f).height(38.dp).clickable { selection.selected = tool }, shape = RoundedCornerShape(4.dp), color = if (selected == tool) Color(0xFF3B5F85) else Color(0xFF303030)) { Box(contentAlignment = Alignment.Center) { Text(tool.label, color = Color(0xFFE5E5E5), fontSize = 9.sp) } } }
-                if (row.size == 1) Spacer(Modifier.weight(1f))
-            }
-        }
+        DesktopCreativeTool.entries.chunked(2).forEach { row -> Row(Modifier.fillMaxWidth().padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) { row.forEach { tool -> Surface(modifier = Modifier.weight(1f).height(38.dp).clickable { selection.selected = tool }, shape = RoundedCornerShape(4.dp), color = if (selected == tool) Color(0xFF3B5F85) else Color(0xFF303030)) { Box(contentAlignment = Alignment.Center) { Text(tool.label, color = Color(0xFFE5E5E5), fontSize = 9.sp) } } }; if (row.size == 1) Spacer(Modifier.weight(1f)) } }
         Spacer(Modifier.height(8.dp)); HorizontalDivider(color = Color(0xFF353535)); Spacer(Modifier.height(10.dp))
         when (selected) {
             DesktopCreativeTool.BRUSH -> ToolStatus("Pincel", "${doc?.brushStrokes?.size ?: 0} trazos", "Limpiar trazos") { onIntent(EditorIntent.ClearBrushStrokes) }
@@ -47,6 +43,11 @@ fun DesktopCreativePanel(state: EditorUiState, onIntent: (EditorIntent) -> Unit,
 @Composable private fun ToolStatus(title: String, count: String, clearLabel: String, onClear: () -> Unit) { Text(title.uppercase(), color = Color(0xFFBDBDBD), fontSize = 9.sp); Text(count, color = Color(0xFF888888), fontSize = 10.sp, modifier = Modifier.padding(vertical = 8.dp)); Text("La interacción se realiza directamente sobre el canvas central.", color = Color(0xFF929292), fontSize = 10.sp, lineHeight = 15.sp); Spacer(Modifier.height(10.dp)); OutlinedButton(onClick = onClear, modifier = Modifier.fillMaxWidth()) { Text(clearLabel, fontSize = 9.sp) } }
 
 @Composable private fun TextTool(state: EditorUiState, onIntent: (EditorIntent) -> Unit) {
-    var text by remember { mutableStateOf("") }; Text("TEXTO", color = Color(0xFFBDBDBD), fontSize = 9.sp); Spacer(Modifier.height(7.dp)); OutlinedTextField(value = text, onValueChange = { text = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Contenido") }, singleLine = true); Spacer(Modifier.height(7.dp)); Button(onClick = { onIntent(EditorIntent.AddTextOverlay(text = text)); text = "" }, enabled = text.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("Añadir texto", fontSize = 10.sp) }
+    val colors = LocalDesktopColorState.current
+    var text by remember { mutableStateOf("") }
+    Text("TEXTO", color = Color(0xFFBDBDBD), fontSize = 9.sp); Spacer(Modifier.height(7.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) { Text("Color frontal", color = Color(0xFF929292), fontSize = 9.sp); Spacer(Modifier.width(8.dp)); Surface(modifier = Modifier.size(18.dp), color = colors.foreground, border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF777777))) {} }
+    Spacer(Modifier.height(7.dp)); OutlinedTextField(value = text, onValueChange = { text = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Contenido") }, singleLine = true); Spacer(Modifier.height(7.dp))
+    Button(onClick = { onIntent(EditorIntent.AddTextOverlay(text = text, colorInt = colors.foreground.toArgb())); text = "" }, enabled = text.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("Añadir texto", fontSize = 10.sp) }
     state.document?.textOverlays.orEmpty().forEach { item -> Row(Modifier.fillMaxWidth().padding(top = 5.dp).background(Color(0xFF303030), RoundedCornerShape(4.dp)).padding(7.dp), verticalAlignment = Alignment.CenterVertically) { Text(item.text, color = Color(0xFFE0E0E0), fontSize = 10.sp, maxLines = 1, modifier = Modifier.weight(1f)); TextButton(onClick = { onIntent(EditorIntent.DeleteTextOverlay(item.id)) }) { Text("Eliminar", fontSize = 8.sp) } } }
 }

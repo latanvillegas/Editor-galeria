@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.toArgb
 import com.hypereditor.nativegallery.domain.model.EditOperation
 import com.hypereditor.nativegallery.domain.model.SelectionMode
 import com.hypereditor.nativegallery.render.BitmapRenderer
@@ -41,6 +42,7 @@ fun DesktopInteractiveCanvasHost(state: EditorUiState, onIntent: (EditorIntent) 
 @Composable
 private fun DesktopNativeCreativeCanvas(state: EditorUiState, onIntent: (EditorIntent) -> Unit, modifier: Modifier = Modifier) {
     val tool = LocalDesktopCreativeSelection.current.selected
+    val colors = LocalDesktopColorState.current
     val bitmap = state.previewBitmap ?: state.originalBitmap
     var selectedTextId by remember { mutableStateOf<String?>(null) }
     var cloneMode by remember { mutableStateOf(CloneMode.SELECT_ORIGIN) }; var cloneOrigin by remember { mutableStateOf<Offset?>(null) }
@@ -50,7 +52,7 @@ private fun DesktopNativeCreativeCanvas(state: EditorUiState, onIntent: (EditorI
     var facialZones by remember { mutableStateOf(state.document?.facialRelights?.firstOrNull()?.zones.orEmpty()) }
 
     when (tool) {
-        DesktopCreativeTool.BRUSH -> BrushInteractiveCanvas(bitmap = bitmap, brushColor = android.graphics.Color.RED, brushSize = 24f, brushOpacity = 1f, isEraserMode = false, onApplyStroke = { onIntent(EditorIntent.AddBrushStroke(it)) }, modifier = modifier.fillMaxSize())
+        DesktopCreativeTool.BRUSH -> BrushInteractiveCanvas(bitmap = bitmap, brushColor = colors.foreground.toArgb(), brushSize = 24f, brushOpacity = 1f, isEraserMode = false, onApplyStroke = { onIntent(EditorIntent.AddBrushStroke(it)) }, modifier = modifier.fillMaxSize())
         DesktopCreativeTool.TEXT -> {
             val textBitmap = remember(bitmap, state.document?.textOverlays?.size) { val src = state.originalBitmap; val doc = state.document; if (src != null && doc != null && doc.textOverlays.isNotEmpty()) BitmapRenderer.renderDocument(src, doc.copy(textOverlays = emptyList()), isPreview = true) else bitmap }
             TextInteractiveCanvas(bitmap = textBitmap, textOverlays = state.document?.textOverlays.orEmpty(), selectedTextId = selectedTextId, onSelectText = { selectedTextId = it }, onUpdateText = { onIntent(EditorIntent.UpdateTextOverlay(it)) }, onDeleteText = { selectedTextId = null; onIntent(EditorIntent.DeleteTextOverlay(it)) }, modifier = modifier.fillMaxSize())

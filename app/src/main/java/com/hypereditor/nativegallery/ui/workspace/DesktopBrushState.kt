@@ -27,7 +27,9 @@ class DesktopBrushState {
     fun setOpacity(value: Float) { opacity = value.coerceIn(0.05f, 1f); markCustom() }
     fun adjustOpacity(delta: Float) { setOpacity(opacity + delta) }
     fun setHardness(value: Float) { hardness = value.coerceIn(0f, 1f); markCustom() }
+    fun adjustHardness(delta: Float) { setHardness(hardness + delta) }
     fun setFlow(value: Float) { flow = value.coerceIn(0.05f, 1f); markCustom() }
+    fun adjustFlow(delta: Float) { setFlow(flow + delta) }
 
     fun applyPreset(preset: DesktopBrushPreset) {
         size = preset.size

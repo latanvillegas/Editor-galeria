@@ -66,6 +66,8 @@ fun DesktopEditorScreen(state: EditorUiState, onIntent: (EditorIntent) -> Unit, 
                     ctrl && event.key == Key.Zero -> { viewportState.reset(); true }
                     event.key == Key.X -> { colorState.swap(); true }
                     event.key == Key.D -> { colorState.reset(); true }
+                    event.key == Key.LeftBracket && selectedTool == DesktopTool.BRUSH && event.isShiftPressed -> { brushState.adjustOpacity(-0.1f); true }
+                    event.key == Key.RightBracket && selectedTool == DesktopTool.BRUSH && event.isShiftPressed -> { brushState.adjustOpacity(0.1f); true }
                     event.key == Key.LeftBracket && selectedTool == DesktopTool.BRUSH -> { brushState.adjustSize(-2f); true }
                     event.key == Key.RightBracket && selectedTool == DesktopTool.BRUSH -> { brushState.adjustSize(2f); true }
                     event.key == Key.E && selectedTool == DesktopTool.BRUSH -> { brushState.toggleEraser(); true }

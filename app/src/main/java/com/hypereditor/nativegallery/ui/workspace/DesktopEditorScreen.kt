@@ -68,6 +68,7 @@ fun DesktopEditorScreen(state: EditorUiState, onIntent: (EditorIntent) -> Unit, 
                     event.key == Key.D -> { colorState.reset(); true }
                     event.key == Key.LeftBracket && selectedTool == DesktopTool.BRUSH -> { brushState.adjustSize(-2f); true }
                     event.key == Key.RightBracket && selectedTool == DesktopTool.BRUSH -> { brushState.adjustSize(2f); true }
+                    event.key == Key.E && selectedTool == DesktopTool.BRUSH -> { brushState.toggleEraser(); true }
                     event.key == Key.DirectionLeft && effectiveTool == DesktopTool.HAND -> { viewportState.panX += 32f; true }
                     event.key == Key.DirectionRight && effectiveTool == DesktopTool.HAND -> { viewportState.panX -= 32f; true }
                     event.key == Key.DirectionUp && effectiveTool == DesktopTool.HAND -> { viewportState.panY += 32f; true }

@@ -1,10 +1,6 @@
-name: Android CI Build APK
+name: Android Build APK (Manual)
 
 on:
-  push:
-    branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
   workflow_dispatch:
 
 concurrency:
@@ -39,8 +35,8 @@ jobs:
         run: |
           mkdir -p dist_apk
           echo "Buscando APK de depuración generado..."
-          APK_FILE=$(find . -type f -name "*debug*.apk" -o -name "*.apk" | grep -v "/intermediates/" | head -n 1)
-          
+          APK_FILE=$(find . -type f \( -name "*debug*.apk" -o -name "*.apk" \) | grep -v "/intermediates/" | head -n 1)
+
           if [ -z "$APK_FILE" ] || [ ! -f "$APK_FILE" ]; then
             echo "::error::No se encontró ningún archivo APK generado en las carpetas de salida de Gradle."
             exit 1

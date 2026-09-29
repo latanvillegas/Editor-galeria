@@ -70,7 +70,28 @@ private fun toolHint(tool: DesktopTool): String = when (tool) {
                     Icon(tool.icon, "${tool.label} (${tool.shortcut})", tint = if (selected == tool) Color.White else Color(0xFFE5E5E5), modifier = Modifier.size(20.dp))
                 }
             }
+            Spacer(Modifier.weight(1f))
+            DesktopColorSwatches()
+            Spacer(Modifier.height(10.dp))
         }
+    }
+}
+
+@Composable private fun DesktopColorSwatches() {
+    Box(Modifier.size(40.dp)) {
+        Surface(
+            modifier = Modifier.size(24.dp).align(Alignment.BottomEnd),
+            color = Color.White,
+            border = BorderStroke(1.dp, Color(0xFF777777)),
+            shape = RoundedCornerShape(2.dp)
+        ) {}
+        Surface(
+            modifier = Modifier.size(24.dp).align(Alignment.TopStart),
+            color = Color.Black,
+            border = BorderStroke(1.dp, Color(0xFFB0B0B0)),
+            shape = RoundedCornerShape(2.dp)
+        ) {}
+        Text("↔", color = Color(0xFFBDBDBD), fontSize = 10.sp, modifier = Modifier.align(Alignment.TopEnd))
     }
 }
 

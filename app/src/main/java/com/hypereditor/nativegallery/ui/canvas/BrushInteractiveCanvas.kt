@@ -38,6 +38,7 @@ fun BrushInteractiveCanvas(
     val activeScreenPoints = remember { mutableStateListOf<Offset>() }
     var currentCursorScreen by remember { mutableStateOf<Offset?>(null) }
     var filteredPoint by remember { mutableStateOf<Offset?>(null) }
+    var strokeStartedInsideImage by remember { mutableStateOf(false) }
 
     Box(modifier = modifier.fillMaxSize().background(Color(0xFF0D0E12)).onSizeChanged { containerSize = it }, contentAlignment = Alignment.Center) {
         if (bitmap == null || containerSize.width <= 0 || containerSize.height <= 0) { CircularProgressIndicator(color = MaterialTheme.colorScheme.primary); return@Box }
@@ -48,6 +49,8 @@ fun BrushInteractiveCanvas(
         val screenStrokeWidth = (brushSize * scaleFactor).coerceAtLeast(2f)
         val previewAlpha = (brushOpacity * brushFlow).coerceIn(0.02f, 1f)
 
+        fun isInsideImage(pt: Offset) = pt.x >= imgLeft && pt.x <= imgLeft + imgW && pt.y >= imgTop && pt.y <= imgTop + imgH
+        fun clampToImage(pt: Offset) = Offset(pt.x.coerceIn(imgLeft, imgLeft + imgW), pt.y.coerceIn(imgTop, imgTop + imgH))
         fun screenToNorm(pt: Offset) = Pair(((pt.x - imgLeft) / imgW).coerceIn(0f, 1f), ((pt.y - imgTop) / imgH).coerceIn(0f, 1f))
         fun apply(points: List<Offset>) {
             if (points.isEmpty()) return
@@ -64,10 +67,21 @@ fun BrushInteractiveCanvas(
         Image(bitmap = bitmap.asImageBitmap(), contentDescription = "Canvas de Pincel", contentScale = ContentScale.FillBounds, modifier = Modifier.offset(x = with(density) { imgLeft.toDp() }, y = with(density) { imgTop.toDp() }).size(width = with(density) { imgW.toDp() }, height = with(density) { imgH.toDp() }).clip(RoundedCornerShape(4.dp)))
         Canvas(modifier = Modifier.fillMaxSize().pointerInput(brushColor, brushSize, brushOpacity, brushHardness, brushFlow, brushSmoothing, isEraserMode, imgLeft, imgTop, imgW, imgH) {
             detectDragGestures(
-                onDragStart = { activeScreenPoints.clear(); filteredPoint = it; activeScreenPoints.add(it); currentCursorScreen = it },
-                onDragEnd = { apply(activeScreenPoints.toList()); activeScreenPoints.clear(); filteredPoint = null; currentCursorScreen = null },
-                onDragCancel = { activeScreenPoints.clear(); filteredPoint = null; currentCursorScreen = null },
-                onDrag = { change, _ -> change.consume(); currentCursorScreen = change.position; activeScreenPoints.add(smooth(change.position)) }
+                onDragStart = { start ->
+                    activeScreenPoints.clear(); filteredPoint = null
+                    strokeStartedInsideImage = isInsideImage(start)
+                    if (strokeStartedInsideImage) { filteredPoint = start; activeScreenPoints.add(start); currentCursorScreen = start } else currentCursorScreen = null
+                },
+                onDragEnd = { if (strokeStartedInsideImage) apply(activeScreenPoints.toList()); activeScreenPoints.clear(); filteredPoint = null; currentCursorScreen = null; strokeStartedInsideImage = false },
+                onDragCancel = { activeScreenPoints.clear(); filteredPoint = null; currentCursorScreen = null; strokeStartedInsideImage = false },
+                onDrag = { change, _ ->
+                    change.consume()
+                    if (strokeStartedInsideImage) {
+                        val bounded = clampToImage(change.position)
+                        currentCursorScreen = bounded
+                        activeScreenPoints.add(smooth(bounded))
+                    }
+                }
             )
         }) {
             val baseColor = if (isEraserMode) Color.White else Color(brushColor)

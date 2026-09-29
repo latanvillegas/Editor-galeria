@@ -32,32 +32,20 @@ fun DesktopEditorScreen(state: EditorUiState, onIntent: (EditorIntent) -> Unit, 
 
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
-    CompositionLocalProvider(
-        LocalDesktopCreativeSelection provides creativeSelection,
-        LocalDesktopColorState provides colorState,
-        LocalDesktopBrushState provides brushState
-    ) {
+    CompositionLocalProvider(LocalDesktopCreativeSelection provides creativeSelection, LocalDesktopColorState provides colorState, LocalDesktopBrushState provides brushState) {
         DesktopWorkspaceShell(
-            selectedTool = effectiveTool,
-            onToolSelected = ::selectTool,
-            documentSize = documentSize,
-            zoomPercent = viewportState.zoomPercentage,
-            canUndo = state.canUndo,
-            canRedo = state.canRedo,
-            isSaving = state.isExporting,
-            onUndo = { onIntent(EditorIntent.Undo) },
-            onRedo = { onIntent(EditorIntent.Redo) },
-            onSave = { onIntent(EditorIntent.SaveAndExport()) },
-            onClose = onClose,
-            onZoomOut = { zoomBy(1f / 1.15f) },
-            onZoomIn = { zoomBy(1.15f) },
-            onResetView = { viewportState.reset() },
+            selectedTool = effectiveTool, onToolSelected = ::selectTool, documentSize = documentSize, zoomPercent = viewportState.zoomPercentage,
+            canUndo = state.canUndo, canRedo = state.canRedo, isSaving = state.isExporting,
+            onUndo = { onIntent(EditorIntent.Undo) }, onRedo = { onIntent(EditorIntent.Redo) }, onSave = { onIntent(EditorIntent.SaveAndExport()) }, onClose = onClose,
+            onZoomOut = { zoomBy(1f / 1.15f) }, onZoomIn = { zoomBy(1.15f) }, onResetView = { viewportState.reset() },
             modifier = Modifier.focusRequester(focusRequester).focusable().onPreviewKeyEvent { event ->
                 if (event.key == Key.Spacebar) { isSpaceHandActive = event.type == KeyEventType.KeyDown; return@onPreviewKeyEvent true }
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 val ctrl = event.isCtrlPressed
+                val shift = event.isShiftPressed
+                val alt = event.isAltPressed
                 when {
-                    ctrl && event.key == Key.Z && event.isShiftPressed -> { if (state.canRedo) onIntent(EditorIntent.Redo); true }
+                    ctrl && event.key == Key.Z && shift -> { if (state.canRedo) onIntent(EditorIntent.Redo); true }
                     ctrl && event.key == Key.Z -> { if (state.canUndo) onIntent(EditorIntent.Undo); true }
                     ctrl && event.key == Key.Y -> { if (state.canRedo) onIntent(EditorIntent.Redo); true }
                     ctrl && event.key == Key.S -> { if (!state.isExporting) onIntent(EditorIntent.SaveAndExport()); true }
@@ -66,8 +54,12 @@ fun DesktopEditorScreen(state: EditorUiState, onIntent: (EditorIntent) -> Unit, 
                     ctrl && event.key == Key.Zero -> { viewportState.reset(); true }
                     event.key == Key.X -> { colorState.swap(); true }
                     event.key == Key.D -> { colorState.reset(); true }
-                    event.key == Key.LeftBracket && selectedTool == DesktopTool.BRUSH && event.isShiftPressed -> { brushState.adjustOpacity(-0.1f); true }
-                    event.key == Key.RightBracket && selectedTool == DesktopTool.BRUSH && event.isShiftPressed -> { brushState.adjustOpacity(0.1f); true }
+                    event.key == Key.LeftBracket && selectedTool == DesktopTool.BRUSH && ctrl -> { brushState.adjustFlow(-0.1f); true }
+                    event.key == Key.RightBracket && selectedTool == DesktopTool.BRUSH && ctrl -> { brushState.adjustFlow(0.1f); true }
+                    event.key == Key.LeftBracket && selectedTool == DesktopTool.BRUSH && alt -> { brushState.adjustHardness(-0.1f); true }
+                    event.key == Key.RightBracket && selectedTool == DesktopTool.BRUSH && alt -> { brushState.adjustHardness(0.1f); true }
+                    event.key == Key.LeftBracket && selectedTool == DesktopTool.BRUSH && shift -> { brushState.adjustOpacity(-0.1f); true }
+                    event.key == Key.RightBracket && selectedTool == DesktopTool.BRUSH && shift -> { brushState.adjustOpacity(0.1f); true }
                     event.key == Key.LeftBracket && selectedTool == DesktopTool.BRUSH -> { brushState.adjustSize(-2f); true }
                     event.key == Key.RightBracket && selectedTool == DesktopTool.BRUSH -> { brushState.adjustSize(2f); true }
                     event.key == Key.E && selectedTool == DesktopTool.BRUSH -> { brushState.toggleEraser(); true }
@@ -88,11 +80,7 @@ fun DesktopEditorScreen(state: EditorUiState, onIntent: (EditorIntent) -> Unit, 
                     else -> false
                 }
             },
-            canvas = {
-                DesktopCanvasStage(documentSize = documentSize, activeTool = effectiveTool, zoomPercent = viewportState.zoomPercentage, viewportState = viewportState, modifier = Modifier.fillMaxSize()) {
-                    DesktopInteractiveCanvasHost(state = state, onIntent = onIntent, viewportState = viewportState, modifier = Modifier.fillMaxSize())
-                }
-            },
+            canvas = { DesktopCanvasStage(documentSize = documentSize, activeTool = effectiveTool, zoomPercent = viewportState.zoomPercentage, viewportState = viewportState, modifier = Modifier.fillMaxSize()) { DesktopInteractiveCanvasHost(state = state, onIntent = onIntent, viewportState = viewportState, modifier = Modifier.fillMaxSize()) } },
             inspector = { DesktopInspectorPanel(state = state, onIntent = onIntent) }
         )
     }

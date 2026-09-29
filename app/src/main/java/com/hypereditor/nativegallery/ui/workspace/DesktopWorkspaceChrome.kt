@@ -36,7 +36,7 @@ enum class DesktopTool(val label: String, val shortcut: String, val icon: ImageV
                 var presetsOpen by remember { mutableStateOf(false) }
                 Spacer(Modifier.width(12.dp))
                 Box {
-                    TextButton(onClick = { presetsOpen = true }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)) { Text("Pinceles ▾", color = Color(0xFFD8D8D8), fontSize = 11.sp) }
+                    TextButton(onClick = { presetsOpen = true }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)) { Text("${brush.activePresetLabel} ▾", color = Color(0xFFD8D8D8), fontSize = 11.sp) }
                     DropdownMenu(expanded = presetsOpen, onDismissRequest = { presetsOpen = false }) {
                         brush.presets.forEach { preset -> DropdownMenuItem(text = { Text("${preset.label}  ${preset.size.toInt()} px / ${(preset.opacity * 100).toInt()}%") }, onClick = { brush.applyPreset(preset); presetsOpen = false }) }
                     }
@@ -46,7 +46,7 @@ enum class DesktopTool(val label: String, val shortcut: String, val icon: ImageV
                 Text("${brush.size.toInt()} px", color = Color.White, fontSize = 11.sp)
                 IconButton(onClick = { brush.adjustSize(2f) }, modifier = Modifier.size(26.dp)) { Icon(Icons.Default.Add, "Aumentar pincel", tint = Color(0xFFD0D0D0), modifier = Modifier.size(14.dp)) }
                 Spacer(Modifier.width(10.dp)); Text("Op. ${(brush.opacity * 100).toInt()}%", color = Color(0xFFB8B8B8), fontSize = 11.sp)
-                Slider(value = brush.opacity, onValueChange = { brush.opacity = it }, valueRange = 0.05f..1f, modifier = Modifier.width(90.dp))
+                Slider(value = brush.opacity, onValueChange = { brush.setOpacity(it) }, valueRange = 0.05f..1f, modifier = Modifier.width(90.dp))
                 Spacer(Modifier.width(6.dp)); TextButton(onClick = { brush.toggleEraser() }, contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)) { Icon(Icons.Default.AutoFixOff, null, tint = if (brush.isEraser) Color(0xFFB9D9FF) else Color(0xFFB8B8B8), modifier = Modifier.size(15.dp)); Spacer(Modifier.width(3.dp)); Text(if (brush.isEraser) "Borrador ON" else "Borrador", color = if (brush.isEraser) Color(0xFFB9D9FF) else Color(0xFFB8B8B8), fontSize = 11.sp) }
             } else { Spacer(Modifier.width(16.dp)); Text("•", color = Color(0xFF666666), fontSize = 11.sp); Spacer(Modifier.width(16.dp)); Text(toolHint(activeTool), color = Color(0xFFB8B8B8), fontSize = 11.sp) }
             Spacer(Modifier.weight(1f)); documentSize?.let { Text(it, color = Color(0xFFAAAAAA), fontSize = 11.sp) }

@@ -11,6 +11,8 @@ class DesktopBrushState {
     var size by mutableStateOf(24f)
     var opacity by mutableStateOf(1f)
     var isEraser by mutableStateOf(false)
+    var activePresetLabel by mutableStateOf("Medio")
+        private set
 
     val presets = listOf(
         DesktopBrushPreset("Fino", 6f, 1f),
@@ -21,16 +23,23 @@ class DesktopBrushState {
 
     fun adjustSize(delta: Float) {
         size = (size + delta).coerceIn(1f, 300f)
+        activePresetLabel = "Personalizado"
+    }
+
+    fun setOpacity(value: Float) {
+        opacity = value.coerceIn(0.05f, 1f)
+        activePresetLabel = "Personalizado"
     }
 
     fun adjustOpacity(delta: Float) {
-        opacity = (opacity + delta).coerceIn(0.05f, 1f)
+        setOpacity(opacity + delta)
     }
 
     fun applyPreset(preset: DesktopBrushPreset) {
         size = preset.size
         opacity = preset.opacity
         isEraser = false
+        activePresetLabel = preset.label
     }
 
     fun toggleEraser() {

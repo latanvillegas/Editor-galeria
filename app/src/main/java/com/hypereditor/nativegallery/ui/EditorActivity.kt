@@ -20,6 +20,7 @@ import com.hypereditor.nativegallery.data.IntentImageLoader
 import com.hypereditor.nativegallery.ui.state.EditorIntent
 import com.hypereditor.nativegallery.ui.state.EditorViewModel
 import com.hypereditor.nativegallery.ui.theme.HyperEditorTheme
+import com.hypereditor.nativegallery.ui.workspace.DesktopEditorScreen
 import kotlinx.coroutines.launch
 
 class EditorActivity : ComponentActivity() {
@@ -63,7 +64,7 @@ class EditorActivity : ComponentActivity() {
         setContent {
             HyperEditorTheme {
                 val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-                HyperEditorScreen(
+                DesktopEditorScreen(
                     state = uiState,
                     onIntent = { viewModel.handleIntent(it) },
                     onClose = {

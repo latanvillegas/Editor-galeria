@@ -69,31 +69,34 @@ fun BrushInteractiveCanvas(
             val last = activeScreenPoints.lastOrNull()
             if (last == null || hypot(point.x - last.x, point.y - last.y) >= minPointDistance) activeScreenPoints.add(point)
         }
+        fun smoothPath(points: List<Offset>): Path = Path().apply {
+            if (points.isEmpty()) return@apply
+            moveTo(points.first().x, points.first().y)
+            if (points.size == 2) {
+                lineTo(points[1].x, points[1].y)
+            } else if (points.size > 2) {
+                for (i in 1 until points.lastIndex) {
+                    val current = points[i]
+                    val next = points[i + 1]
+                    quadraticBezierTo(current.x, current.y, (current.x + next.x) * 0.5f, (current.y + next.y) * 0.5f)
+                }
+                lineTo(points.last().x, points.last().y)
+            }
+        }
 
         Image(bitmap = bitmap.asImageBitmap(), contentDescription = "Canvas de Pincel", contentScale = ContentScale.FillBounds, modifier = Modifier.offset(x = with(density) { imgLeft.toDp() }, y = with(density) { imgTop.toDp() }).size(width = with(density) { imgW.toDp() }, height = with(density) { imgH.toDp() }).clip(RoundedCornerShape(4.dp)))
         Canvas(modifier = Modifier.fillMaxSize().pointerInput(brushColor, brushSize, brushOpacity, brushHardness, brushFlow, brushSmoothing, isEraserMode, imgLeft, imgTop, imgW, imgH) {
             detectDragGestures(
-                onDragStart = { start ->
-                    activeScreenPoints.clear(); filteredPoint = null
-                    strokeStartedInsideImage = isInsideImage(start)
-                    if (strokeStartedInsideImage) { filteredPoint = start; activeScreenPoints.add(start); currentCursorScreen = start } else currentCursorScreen = null
-                },
+                onDragStart = { start -> activeScreenPoints.clear(); filteredPoint = null; strokeStartedInsideImage = isInsideImage(start); if (strokeStartedInsideImage) { filteredPoint = start; activeScreenPoints.add(start); currentCursorScreen = start } else currentCursorScreen = null },
                 onDragEnd = { if (strokeStartedInsideImage) apply(activeScreenPoints.toList()); activeScreenPoints.clear(); filteredPoint = null; currentCursorScreen = null; strokeStartedInsideImage = false },
                 onDragCancel = { activeScreenPoints.clear(); filteredPoint = null; currentCursorScreen = null; strokeStartedInsideImage = false },
-                onDrag = { change, _ ->
-                    change.consume()
-                    if (strokeStartedInsideImage) {
-                        val bounded = clampToImage(change.position)
-                        currentCursorScreen = bounded
-                        appendIfUseful(smooth(bounded))
-                    }
-                }
+                onDrag = { change, _ -> change.consume(); if (strokeStartedInsideImage) { val bounded = clampToImage(change.position); currentCursorScreen = bounded; appendIfUseful(smooth(bounded)) } }
             )
         }) {
             val baseColor = if (isEraserMode) Color.White else Color(brushColor)
             val softAlpha = previewAlpha * (0.18f + brushHardness.coerceIn(0f, 1f) * 0.82f)
             if (activeScreenPoints.size >= 2) {
-                val path = Path().apply { moveTo(activeScreenPoints.first().x, activeScreenPoints.first().y); for (i in 1 until activeScreenPoints.size) lineTo(activeScreenPoints[i].x, activeScreenPoints[i].y) }
+                val path = smoothPath(activeScreenPoints)
                 if (brushHardness < 0.98f) drawPath(path, baseColor.copy(alpha = previewAlpha * (1f - brushHardness) * 0.35f), Stroke(width = screenStrokeWidth * (1.35f + (1f - brushHardness) * 0.65f), cap = StrokeCap.Round, join = StrokeJoin.Round))
                 drawPath(path, baseColor.copy(alpha = softAlpha), Stroke(width = screenStrokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round))
             } else if (activeScreenPoints.size == 1) {

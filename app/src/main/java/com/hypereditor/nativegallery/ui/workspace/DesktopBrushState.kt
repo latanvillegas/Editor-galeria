@@ -14,6 +14,10 @@ class DesktopBrushState {
         size = (size + delta).coerceIn(1f, 300f)
     }
 
+    fun adjustOpacity(delta: Float) {
+        opacity = (opacity + delta).coerceIn(0.05f, 1f)
+    }
+
     fun toggleEraser() {
         isEraser = !isEraser
     }

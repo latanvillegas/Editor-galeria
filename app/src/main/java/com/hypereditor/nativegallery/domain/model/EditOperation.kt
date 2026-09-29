@@ -64,6 +64,8 @@ sealed interface EditOperation : Parcelable {
         val colorInt: Int = Color.RED,
         val strokeWidth: Float = 14f,
         val opacity: Float = 1.0f,
+        val hardness: Float = 1.0f,
+        val flow: Float = 1.0f,
         val isEraser: Boolean = false
     ) : EditOperation
 
@@ -115,7 +117,7 @@ sealed interface EditOperation : Parcelable {
         val radius: Float = 28f,
         val feather: Float = 0.5f,
         val strength: Float = 1.0f,
-        val manualSourceOffset: PointOffset? = null // null: Muestreo automático vecindario local, no nulo: Muestreo manual
+        val manualSourceOffset: PointOffset? = null
     ) : EditOperation
 
     @Parcelize
@@ -128,7 +130,7 @@ sealed interface EditOperation : Parcelable {
         val radiusNorm: Float = 0.08f,
         val feather: Float = 0.5f,
         val strength: Float = 1.0f,
-        val boundaryPoints: List<Pair<Float, Float>> = emptyList() // Opcional si fue selección libre
+        val boundaryPoints: List<Pair<Float, Float>> = emptyList()
     ) : EditOperation
 
     @Parcelize
@@ -151,15 +153,7 @@ sealed interface EditOperation : Parcelable {
         val isEnabled: Boolean = true
     ) : EditOperation
 
-    enum class FacialZoneType {
-        ALL,
-        FOREHEAD,
-        LEFT_CHEEK,
-        RIGHT_CHEEK,
-        NOSE,
-        CHIN,
-        JAWLINE
-    }
+    enum class FacialZoneType { ALL, FOREHEAD, LEFT_CHEEK, RIGHT_CHEEK, NOSE, CHIN, JAWLINE }
 
     @Parcelize
     data class FacialRelightZone(

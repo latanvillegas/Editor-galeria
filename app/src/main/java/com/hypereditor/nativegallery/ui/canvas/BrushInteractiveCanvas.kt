@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.hypereditor.nativegallery.domain.model.EditOperation
+import kotlin.math.hypot
 
 @Composable
 fun BrushInteractiveCanvas(
@@ -48,6 +49,7 @@ fun BrushInteractiveCanvas(
         val scaleFactor = minOf(imgW, imgH) / 1000f
         val screenStrokeWidth = (brushSize * scaleFactor).coerceAtLeast(2f)
         val previewAlpha = (brushOpacity * brushFlow).coerceIn(0.02f, 1f)
+        val minPointDistance = (screenStrokeWidth * 0.08f).coerceIn(1.25f, 5f)
 
         fun isInsideImage(pt: Offset) = pt.x >= imgLeft && pt.x <= imgLeft + imgW && pt.y >= imgTop && pt.y <= imgTop + imgH
         fun clampToImage(pt: Offset) = Offset(pt.x.coerceIn(imgLeft, imgLeft + imgW), pt.y.coerceIn(imgTop, imgTop + imgH))
@@ -62,6 +64,10 @@ fun BrushInteractiveCanvas(
             val smoothing = brushSmoothing.coerceIn(0f, 0.9f)
             val response = 1f - smoothing * 0.82f
             return Offset(previous.x + (raw.x - previous.x) * response, previous.y + (raw.y - previous.y) * response).also { filteredPoint = it }
+        }
+        fun appendIfUseful(point: Offset) {
+            val last = activeScreenPoints.lastOrNull()
+            if (last == null || hypot(point.x - last.x, point.y - last.y) >= minPointDistance) activeScreenPoints.add(point)
         }
 
         Image(bitmap = bitmap.asImageBitmap(), contentDescription = "Canvas de Pincel", contentScale = ContentScale.FillBounds, modifier = Modifier.offset(x = with(density) { imgLeft.toDp() }, y = with(density) { imgTop.toDp() }).size(width = with(density) { imgW.toDp() }, height = with(density) { imgH.toDp() }).clip(RoundedCornerShape(4.dp)))
@@ -79,7 +85,7 @@ fun BrushInteractiveCanvas(
                     if (strokeStartedInsideImage) {
                         val bounded = clampToImage(change.position)
                         currentCursorScreen = bounded
-                        activeScreenPoints.add(smooth(bounded))
+                        appendIfUseful(smooth(bounded))
                     }
                 }
             )
